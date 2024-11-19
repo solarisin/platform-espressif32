@@ -45,7 +45,7 @@
       "type": "framework",
       "optional": true,
       "owner": "pioarduino",
-      "version": "https://github.com/pioarduino/esp-idf/releases/download/v5.1.5/esp-idf-v5.1.5.zip"
+      "version": "https://github.com/pioarduino/esp-idf/releases/download/v5.1.5.241118/esp-idf-v5.1.5.zip"
     },
     "toolchain-xtensa-esp32": {
       "type": "toolchain",
