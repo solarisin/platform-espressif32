@@ -18,7 +18,7 @@
     "type": "git",
     "url": "https://github.com/pioarduino/platform-espressif32.git"
   },
-  "version": "51.03.06+develop",
+  "version": "51.03.07+develop",
   "frameworks": {
     "arduino": {
       "script": "builder/frameworks/arduino.py"
