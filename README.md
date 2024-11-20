@@ -41,7 +41,7 @@ See `platform` [documentation](https://docs.platformio.org/en/latest/projectconf
 
 ```ini
 [env:stable]
-platform = https://github.com/pioarduino/platform-espressif32/releases/download/51.03.0x-stable/platform-espressif32.zip
+platform = https://github.com/pioarduino/platform-espressif32/releases/download/stable/platform-espressif32.zip
 board = ...
 ...
 ```
