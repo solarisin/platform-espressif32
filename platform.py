@@ -18,8 +18,10 @@ import sys
 import json
 import re
 import requests
+from os.path import isfile, join
 
 from platformio.public import PlatformBase, to_unix_path
+from platformio.project.config import ProjectConfig
 
 
 IS_WINDOWS = sys.platform.startswith("win")
@@ -45,22 +47,24 @@ class Espressif32Platform(PlatformBase):
         if "arduino" in frameworks:
             self.packages["framework-arduinoespressif32"]["optional"] = False
             self.packages["framework-arduinoespressif32-libs"]["optional"] = False
-            try:
-                # use latest stable release Arduino core
-                ARDUINO_CORE_API_URL = "https://api.github.com/repos/espressif/Arduino-esp32/releases/latest"
-                api_data = requests.get(ARDUINO_CORE_API_URL, timeout=2).json()
-                zipball = api_data.get("zipball_url")
-                tag = api_data.get("tag_name")
-                if tag is not None:
-                    # print("Latest release Arduino core URL:", zipball)
-                    self.packages["framework-arduinoespressif32"]["version"] = zipball
-                    # use corresponding espressif Arduino libs to release
-                    URL = "https://raw.githubusercontent.com/espressif/arduino-esp32/" + tag + "/package/package_esp32_index.template.json"
-                    packjdata = requests.get(URL, timeout=10).json()
-                    dyn_lib_url = packjdata['packages'][0]['tools'][0]['systems'][0]['url']
-                    self.packages["framework-arduinoespressif32-libs"]["version"] = dyn_lib_url
-            except:
-                pass
+            ARDUINO_FRAMEWORK_DIR = os.path.join(ProjectConfig.get_instance().get("platformio", "packages_dir"), "framework-arduinoespressif32")
+            if not bool(os.path.exists(ARDUINO_FRAMEWORK_DIR)):
+                try:
+                    # use latest stable release Arduino core
+                    ARDUINO_CORE_API_URL = "https://api.github.com/repos/espressif/Arduino-esp32/releases/latest"
+                    api_data = requests.get(ARDUINO_CORE_API_URL, timeout=2).json()
+                    zipball = api_data.get("zipball_url")
+                    tag = api_data.get("tag_name")
+                    if tag is not None:
+                        # print("Latest release Arduino core URL:", zipball)
+                        self.packages["framework-arduinoespressif32"]["version"] = zipball
+                        # use corresponding espressif Arduino libs to release
+                        URL = "https://raw.githubusercontent.com/espressif/arduino-esp32/" + tag + "/package/package_esp32_index.template.json"
+                        packjdata = requests.get(URL, timeout=10).json()
+                        dyn_lib_url = packjdata['packages'][0]['tools'][0]['systems'][0]['url']
+                        self.packages["framework-arduinoespressif32-libs"]["version"] = dyn_lib_url
+                except:
+                    pass
 
         if "buildfs" in targets:
             filesystem = variables.get("board_build.filesystem", "littlefs")
@@ -132,10 +136,10 @@ class Espressif32Platform(PlatformBase):
         # and RISC-V targets.
         for gdb_package in ("tool-xtensa-esp-elf-gdb", "tool-riscv32-esp-elf-gdb"):
             self.packages[gdb_package]["optional"] = False
-            if IS_WINDOWS:
+            #if IS_WINDOWS:
                 # Note: On Windows GDB v12 is not able to
                 # launch a GDB server in pipe mode while v11 works fine
-                self.packages[gdb_package]["version"] = "~11.2.0"
+                # self.packages[gdb_package]["version"] = "~11.2.0"
 
         # Common packages for IDF and mixed Arduino+IDF projects
         if "espidf" in frameworks:
