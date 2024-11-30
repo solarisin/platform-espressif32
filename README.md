@@ -12,7 +12,7 @@ ESP32 is a series of low-cost, low-power system on a chip microcontrollers with 
 
 - [Download and install official Microsoft Visual Studio Code](https://code.visualstudio.com/). pioarduino IDE is built on top of it.
 - Open the extension manager.
-- Search for the official `pioarduino ide` extension.
+- Search for the `pioarduino ide` extension.
 - Install pioarduino IDE extension.
 
 # Usage
