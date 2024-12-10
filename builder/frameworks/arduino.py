@@ -33,6 +33,10 @@ build_core = board.get("build.core", "").lower()
 SConscript("_embed_files.py", exports="env")
 
 if "espidf" not in env.subst("$PIOFRAMEWORK"):
+    if os.path.exists(join(FRAMEWORK_DIR, "tools", "platformio-build.py")):
+        PIO_BUILD = "platformio-build.py"
+    else:
+        PIO_BUILD = "pioarduino-build.py"
     SConscript(
         join(DefaultEnvironment().PioPlatform().get_package_dir(
-            "framework-arduinoespressif32"), "tools", "platformio-build.py"))
+            "framework-arduinoespressif32"), "tools", PIO_BUILD))
