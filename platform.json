@@ -92,7 +92,7 @@
     "tool-esptoolpy": {
       "type": "uploader",
       "owner": "pioarduino",
-      "version": "https://github.com/pioarduino/esptool/releases/download/v4.8.1.1/esptool.zip"
+      "version": "https://github.com/pioarduino/esptool/releases/download/v4.8.5/esptool.zip"
     },
     "tool-dfuutil-arduino": {
       "type": "uploader",
