@@ -50,7 +50,7 @@ based on devel branch Arduino 3.1.0 and IDF 5.3.1+
 
 ```ini
 [env:development]
-platform = https://github.com/pioarduino/platform-espressif32.git#Arduino/IDF53
+platform = https://github.com/pioarduino/platform-espressif32.git#Arduino/IDF53_work_hybrid
 board = ...
 ...
 ```
