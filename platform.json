@@ -18,7 +18,7 @@
     "type": "git",
     "url": "https://github.com/pioarduino/platform-espressif32.git"
   },
-  "version": "51.03.0x-stable",
+  "version": "53.03.10+develop",
   "frameworks": {
     "arduino": {
       "script": "builder/frameworks/arduino.py"
@@ -33,7 +33,7 @@
       "type": "framework",
       "optional": true,
       "owner": "espressif",
-      "version": ""
+      "version": "https://github.com/espressif/arduino-esp32/archive/refs/heads/release/v3.1.x.zip"
     },
     "framework-arduinoespressif32-libs": {
       "type": "framework",
@@ -41,53 +41,47 @@
       "owner": "espressif",
       "version": ""
     },
+    "framework-arduino-c2-skeleton-lib": {
+      "type": "framework",
+      "optional": true,
+      "owner": "espressif",
+      "version": "https://github.com/pioarduino/platform-espressif32/releases/download/53.03.10-rc3/c2_arduino_compile_skeleton.zip"
+    },
     "framework-espidf": {
       "type": "framework",
       "optional": true,
       "owner": "pioarduino",
-      "version": "https://github.com/pioarduino/esp-idf/releases/download/v5.1.5/esp-idf-v5.1.5.zip"
+      "version": "https://github.com/pioarduino/esp-idf/releases/download/v5.3.2.241012/esp-idf-v5.3.2.zip"
     },
-    "toolchain-xtensa-esp32": {
+    "toolchain-xtensa-esp-elf": {
       "type": "toolchain",
       "optional": true,
-      "owner": "espressif",
-      "version": "12.2.0+20230208"
-    },
-    "toolchain-xtensa-esp32s2": {
-      "type": "toolchain",
-      "optional": true,
-      "owner": "espressif",
-      "version": "12.2.0+20230208"
-    },
-    "toolchain-xtensa-esp32s3": {
-      "type": "toolchain",
-      "optional": true,
-      "owner": "espressif",
-      "version": "12.2.0+20230208"
+      "owner": "platformio",
+      "version": "13.2.0+20240530"
     },
     "toolchain-riscv32-esp": {
       "type": "toolchain",
       "optional": true,
-      "owner": "espressif",
-      "version": "12.2.0+20230208"
+      "owner": "platformio",
+      "version": "13.2.0+20240530"
     },
     "toolchain-esp32ulp": {
       "type": "toolchain",
       "optional": true,
       "owner": "platformio",
-      "version": "~1.23500.0"
+      "version": "~1.23800.0"
     },
       "tool-xtensa-esp-elf-gdb": {
       "type": "debugger",
       "optional": true,
-      "owner": "espressif",
-      "version": "~12.1.0"
+      "owner": "platformio",
+      "version": "14.2.0+20240403"
     },
     "tool-riscv32-esp-elf-gdb": {
       "type": "debugger",
       "optional": true,
-      "owner": "espressif",
-      "version": "~12.1.0"
+      "owner": "platformio",
+      "version": "14.2.0+20240403"
     },
     "tool-esptoolpy": {
       "type": "uploader",
