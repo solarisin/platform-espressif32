@@ -19,7 +19,7 @@
 ESP32 is a series of low-cost, low-power system on a chip microcontrollers with integrated Wi-Fi and Bluetooth. ESP32 integrates an antenna switch, RF balun, power amplifier, low-noise receive amplifier, filters, and power management modules.
 
 * [Documentation](https://docs.platformio.org/page/platforms/espressif32.html) (advanced usage, packages, boards, frameworks, etc.)
-* Issues with boards (wrong / missing). All issues caused from boards will **not** be fixed from the maintainer(s). A PR needs to be provided to solve.
+* Issues with boards (wrong / missing). All issues caused from boards will not be fixed from the maintainer(s). A PR needs to be provided to solve.
 
 ## IDE Preparation
 
@@ -35,7 +35,6 @@ ESP32 is a series of low-cost, low-power system on a chip microcontrollers with 
 1. Configure a platform option in [platformio.ini](https://docs.platformio.org/page/projectconf.html) file:
 
 ### Stable version
-currently espressif Arduino 3.0.7 and IDF 5.1.4+
 
 See `platform` [documentation](https://docs.platformio.org/en/latest/projectconf/sections/env/options/platform/platform.html#projectconf-env-platform) for details.
 
@@ -47,11 +46,11 @@ board = ...
 ```
 
 ### Development version
-espressif Arduino repo branch master and latest compiled Arduino libs
+based on devel branch Arduino 3.1.0 and IDF 5.3.2
 
 ```ini
 [env:development]
-platform = https://github.com/pioarduino/platform-espressif32.git#develop
+platform = https://github.com/pioarduino/platform-espressif32.git#Arduino/IDF53
 board = ...
 ...
 ```
