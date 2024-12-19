@@ -29,8 +29,8 @@ board = ...
 ...
 ```
 
-### Development version
-espressif Arduino repo branch release/v3.1.x and latest compiled Arduino libs
+### Development version (Arduino core 3.1.0+ and IDF 5.3.2+)
+espressif Arduino repo branch master and latest compiled Arduino libs
 
 ```ini
 [env:development]
