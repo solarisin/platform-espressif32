@@ -254,9 +254,9 @@ env.Replace(
     CXX="%s-elf-g++" % toolchain_arch,
     GDB=join(
         platform.get_package_dir(
-            "tool-riscv32-esp-elf-gdb"
+            "riscv32-esp-elf-gdb"
             if mcu in ("esp32c2", "esp32c3", "esp32c6", "esp32h2", "esp32p4")
-            else "tool-xtensa-esp-elf-gdb"
+            else "xtensa-esp-elf-gdb"
         )
         or "",
         "bin",
@@ -487,7 +487,7 @@ elif upload_protocol == "dfu":
 
     env.Replace(
         UPLOADER=join(
-            platform.get_package_dir("tool-dfuutil-arduino") or "", "dfu-util"
+            platform.get_package_dir("tool-dfuutil") or "", "dfu-util"
         ),
         UPLOADERFLAGS=[
             "-d",
@@ -531,7 +531,7 @@ elif upload_protocol in debug_tools:
         f.replace(
             "$PACKAGE_DIR",
             _to_unix_slashes(
-                platform.get_package_dir("tool-openocd-esp32") or ""))
+                platform.get_package_dir("tool-openocd") or ""))
         for f in openocd_args
     ]
     env.Replace(

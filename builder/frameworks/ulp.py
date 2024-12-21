@@ -36,13 +36,13 @@ def prepare_ulp_env_vars(env):
     ulp_env.PrependENVPath("IDF_PATH", FRAMEWORK_DIR)
 
     toolchain_path = platform.get_package_dir(
-        "toolchain-xtensa-esp-elf"
+        "xtensa-esp-elf"
         if idf_variant not in ("esp32c6", "esp32p4")
-        else "toolchain-riscv32-esp"
+        else "riscv32-esp-elf"
     )
 
     toolchain_path_ulp = platform.get_package_dir(
-        "toolchain-esp32ulp"
+        "esp32ulp-elf"
         if sdk_config.get("ULP_COPROC_TYPE_FSM", False)
         else ""
     )

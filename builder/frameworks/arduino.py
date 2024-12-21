@@ -197,4 +197,6 @@ if "arduino" in env.subst("$PIOFRAMEWORK") and "espidf" not in env.subst("$PIOFR
         PIO_BUILD = "platformio-build.py"
     else:
         PIO_BUILD = "pioarduino-build.py"
-    SConscript(join(platform.get_package_dir("framework-arduinoespressif32"), "tools", PIO_BUILD))
+    SConscript(
+        join(DefaultEnvironment().PioPlatform().get_package_dir(
+            "framework-arduinoespressif32"), "tools", PIO_BUILD))
