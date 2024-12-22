@@ -29,7 +29,7 @@ board = ...
 ...
 ```
 
-### Development version (Arduino core 3.1.0+ and IDF 5.3.2+)
+### Development version
 espressif Arduino repo branch master and latest compiled Arduino libs
 
 ```ini
@@ -38,3 +38,5 @@ platform = https://github.com/pioarduino/platform-espressif32.git#develop
 board = ...
 ...
 ```
+
+Looking for sponsor button? There is none. If you want to donate, please spend a litte to a charity organization.
