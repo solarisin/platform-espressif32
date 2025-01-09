@@ -20,7 +20,7 @@ ESP32 is a series of low-cost, low-power system on a chip microcontrollers with 
 1. Configure a platform option in platformio.ini file:
 
 ### Stable version
-currently espressif Arduino 3.1.1 and IDF 5.3.2.250106
+currently espressif Arduino 3.1.1 and IDF 5.3.2.241224
 
 ```ini
 [env:stable]
