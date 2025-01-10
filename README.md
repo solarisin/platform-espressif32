@@ -6,7 +6,7 @@
 
 ESP32 is a series of low-cost, low-power system on a chip microcontrollers with integrated Wi-Fi and Bluetooth. ESP32 integrates an antenna switch, RF balun, power amplifier, low-noise receive amplifier, filters, and power management modules.
 
-* Issues with boards (wrong / missing). All issues caused from boards will **not** be fixed from the maintainer(s). A PR needs to be provided to solve.
+* Issues with boards (wrong / missing). All issues caused from boards will not be fixed from the maintainer(s). A PR needs to be provided against branch `develop` to solve.
 
 ## IDE Preparation
 
