@@ -56,7 +56,7 @@ extra_flags = (''.join([element for element in board.get("build.extra_flags", ""
 framework_reinstall = False
 flag_any_custom_sdkconfig = False
 
-FRAMEWORK_LIB_DIR = platform.get_package_dir("framework-arduinoespressif32-lib")
+FRAMEWORK_LIB_DIR = platform.get_package_dir("framework-arduinoespressif32-libs")
 
 SConscript("_embed_files.py", exports="env")
 
