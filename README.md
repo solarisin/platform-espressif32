@@ -39,7 +39,7 @@ board = ...
 ...
 ```
 
-### ESP32-solo1 and ESP32-C2 Arduino support (with pioarduino only feature *Hybrid compile*)
+### ESP32-solo1 and ESP32-C2 Arduino support (with pioarduino only feature: *Hybrid compile*)
 Example configuration:
 
 ```ini
