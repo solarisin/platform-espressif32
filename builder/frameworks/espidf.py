@@ -1585,11 +1585,37 @@ def get_idf_venv_dir():
 
 def ensure_python_venv_available():
 
+    def _get_idf_venv_python_version():
+        try:
+            version = subprocess.check_output(
+                [
+                    get_python_exe(),
+                    "-c",
+                    "import sys;print('{0}.{1}.{2}-{3}.{4}'.format(*list(sys.version_info)))"
+                ], text=True
+            )
+            return version.strip()
+        except subprocess.CalledProcessError as e:
+            print("Failed to extract Python version from IDF virtual env!")
+            return None
+
     def _is_venv_outdated(venv_data_file):
         try:
             with open(venv_data_file, "r", encoding="utf8") as fp:
                 venv_data = json.load(fp)
                 if venv_data.get("version", "") != IDF_ENV_VERSION:
+                    print(
+                        "Warning! IDF virtual environment version changed!"
+                    )
+                    return True
+                if (
+                    venv_data.get("python_version", "")
+                    != _get_idf_venv_python_version()
+                ):
+                    print(
+                        "Warning! Python version in the IDF virtual environment"
+                        " differs from the current Python!"
+                    )
                     return True
                 return False
         except:
@@ -1604,7 +1630,7 @@ def ensure_python_venv_available():
 
         if os.path.isdir(venv_dir):
             try:
-                print("Removing an oudated IDF virtual environment")
+                print("Removing an outdated IDF virtual environment")
                 shutil.rmtree(venv_dir)
             except OSError:
                 print(
@@ -1629,8 +1655,12 @@ def ensure_python_venv_available():
     venv_data_file = os.path.join(venv_dir, "pio-idf-venv.json")
     if not os.path.isfile(venv_data_file) or _is_venv_outdated(venv_data_file):
         _create_venv(venv_dir)
+        install_python_deps()
         with open(venv_data_file, "w", encoding="utf8") as fp:
-            venv_info = {"version": IDF_ENV_VERSION}
+            venv_info = {
+                "version": IDF_ENV_VERSION,
+                "python_version": _get_idf_venv_python_version()
+            }
             json.dump(venv_info, fp, indent=2)
 
 
@@ -1649,11 +1679,10 @@ def get_python_exe():
 
 
 #
-# ESP-IDF requires Python packages with specific versions in a virtual environment
+# Ensure Python environment contains everything required for IDF
 #
 
 ensure_python_venv_available()
-install_python_deps()
 
 # ESP-IDF package doesn't contain .git folder, instead package version is specified
 # in a special file "version.h" in the root folder of the package
@@ -1859,7 +1888,15 @@ libs = find_lib_deps(
 # Extra flags which need to be explicitly specified in LINKFLAGS section because SCons
 # cannot merge them correctly
 extra_flags = filter_args(
-    link_args["LINKFLAGS"], ["-T", "-u", "-Wl,--start-group", "-Wl,--end-group"]
+    link_args["LINKFLAGS"],
+    [
+        "-T",
+        "-u",
+        "-Wl,--start-group",
+        "-Wl,--end-group",
+        "-Wl,--whole-archive",
+        "-Wl,--no-whole-archive",
+    ],
 )
 link_args["LINKFLAGS"] = sorted(list(set(link_args["LINKFLAGS"]) - set(extra_flags)))
 
@@ -2079,6 +2116,7 @@ if "arduino" in env.get("PIOFRAMEWORK") and "espidf" not in env.get("PIOFRAMEWOR
             shutil.move(join(lib_dst,"libfreertos.a"),join(mem_var,"libfreertos.a"))
             shutil.move(join(lib_dst,"libbootloader_support.a"),join(mem_var,"libbootloader_support.a"))
             shutil.move(join(lib_dst,"libesp_hw_support.a"),join(mem_var,"libesp_hw_support.a"))
+            shutil.move(join(lib_dst,"libesp_lcd.a"),join(mem_var,"libesp_lcd.a"))
 
         shutil.copyfile(sdkconfig_h_path,join(mem_var,"include","sdkconfig.h"))
         if not bool(os.path.isfile(join(arduino_libs,mcu,"sdkconfig.orig"))):

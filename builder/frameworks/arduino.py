@@ -26,10 +26,12 @@ import subprocess
 import json
 import semantic_version
 import os
+import sys
 import shutil
 from os.path import join
 
 from SCons.Script import COMMAND_LINE_TARGETS, DefaultEnvironment, SConscript
+from platformio import fs
 from platformio.package.version import pepver_to_semver
 from platformio.project.config import ProjectConfig
 from platformio.package.manager.tool import ToolPackageManager
@@ -43,6 +45,7 @@ mcu = board.get("build.mcu", "esp32")
 board_sdkconfig = board.get("espidf.custom_sdkconfig", "")
 entry_custom_sdkconfig = "\n"
 flag_custom_sdkconfig = False
+IS_WINDOWS = sys.platform.startswith("win")
 
 if config.has_option("env:"+env["PIOENV"], "custom_sdkconfig"):
     entry_custom_sdkconfig = env.GetProjectOption("custom_sdkconfig")
@@ -54,6 +57,8 @@ if len(str(board_sdkconfig)) > 2:
 extra_flags = (''.join([element for element in board.get("build.extra_flags", "")])).replace("-D", " ")
 framework_reinstall = False
 flag_any_custom_sdkconfig = False
+
+FRAMEWORK_LIB_DIR = platform.get_package_dir("framework-arduinoespressif32-libs")
 
 SConscript("_embed_files.py", exports="env")
 
@@ -171,11 +176,65 @@ def check_reinstall_frwrk():
         framework_reinstall = True
     return framework_reinstall
 
+
+FRAMEWORK_SDK_DIR = fs.to_unix_path(
+    os.path.join(
+        FRAMEWORK_LIB_DIR,
+        mcu,
+        "include",
+    )
+)
+
+IS_INTEGRATION_DUMP = env.IsIntegrationDump()
+
+
+def is_framework_subfolder(potential_subfolder):
+    if not os.path.isabs(potential_subfolder):
+        return False
+    if (
+        os.path.splitdrive(FRAMEWORK_SDK_DIR)[0]
+        != os.path.splitdrive(potential_subfolder)[0]
+    ):
+        return False
+    return os.path.commonpath([FRAMEWORK_SDK_DIR]) == os.path.commonpath(
+        [FRAMEWORK_SDK_DIR, potential_subfolder]
+    )
+
+
+def shorthen_includes(env, node):
+    if IS_INTEGRATION_DUMP:
+        # Don't shorten include paths for IDE integrations
+        return node
+
+    includes = [fs.to_unix_path(inc) for inc in env.get("CPPPATH", [])]
+    shortened_includes = []
+    generic_includes = []
+    for inc in includes:
+        if is_framework_subfolder(inc):
+            shortened_includes.append(
+                "-iwithprefix/"
+                + fs.to_unix_path(os.path.relpath(inc, FRAMEWORK_SDK_DIR))
+            )
+        else:
+            generic_includes.append(inc)
+
+    return env.Object(
+        node,
+        CPPPATH=generic_includes,
+        CCFLAGS=env["CCFLAGS"]
+        + ["-iprefix", FRAMEWORK_SDK_DIR]
+        + shortened_includes,
+        ASFLAGS=env["ASFLAGS"]
+        + ["-iprefix", FRAMEWORK_SDK_DIR]
+        + shortened_includes,
+    )
+
 def call_compile_libs():
     if mcu == "esp32c2":
         ARDUINO_FRMWRK_C2_LIB_DIR = join(platform.get_package_dir("framework-arduinoespressif32-libs"),mcu)
-        ARDUINO_C2_DIR = join(platform.get_package_dir("framework-arduino-c2-skeleton-lib"),mcu)
-        shutil.copytree(ARDUINO_C2_DIR, ARDUINO_FRMWRK_C2_LIB_DIR, dirs_exist_ok=True)
+        if not os.path.exists(ARDUINO_FRMWRK_C2_LIB_DIR):
+            ARDUINO_C2_DIR = join(platform.get_package_dir("framework-arduino-c2-skeleton-lib"),mcu)
+            shutil.copytree(ARDUINO_C2_DIR, ARDUINO_FRMWRK_C2_LIB_DIR, dirs_exist_ok=True)
     print("*** Compile Arduino IDF libs for %s ***" % env["PIOENV"])
     SConscript("espidf.py")
 
@@ -192,6 +251,8 @@ if flag_custom_sdkconfig == True and flag_any_custom_sdkconfig == False:
     call_compile_libs()
 
 if "arduino" in env.subst("$PIOFRAMEWORK") and "espidf" not in env.subst("$PIOFRAMEWORK") and env.subst("$ARDUINO_LIB_COMPILE_FLAG") in ("Inactive", "True"):
+    if IS_WINDOWS:
+        env.AddBuildMiddleware(shorthen_includes)
     if os.path.exists(join(platform.get_package_dir(
             "framework-arduinoespressif32"), "tools", "platformio-build.py")):
         PIO_BUILD = "platformio-build.py"
