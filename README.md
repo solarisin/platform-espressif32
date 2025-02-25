@@ -1,6 +1,6 @@
 # pioarduino (p)eople (i)nitiated (o)ptimized (arduino)
 
-[![Examples](https://github.com/pioarduino/platform-espressif32/actions/workflows/examples.yml/badge.svg)](https://github.com/pioarduino/platform-espressif32/actions/workflows/examples.yml)
+[![CI Examples](https://github.com/pioarduino/platform-espressif32/actions/workflows/examples.yml/badge.svg?branch=develop)](https://github.com/pioarduino/platform-espressif32/actions/workflows/examples.yml)
 [![Discord](https://img.shields.io/discord/1263397951829708871.svg?logo=discord&logoColor=white&color=5865F2&label=Discord)](https://discord.gg/Nutz9crnZr)
 [![GitHub Releases](https://img.shields.io/github/downloads/pioarduino/platform-espressif32/total?label=downloads)](https://github.com/pioarduino/platform-espressif32/releases/latest)
 
