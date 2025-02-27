@@ -18,7 +18,7 @@
     "type": "git",
     "url": "https://github.com/pioarduino/platform-espressif32.git"
   },
-  "version": "53.03.13",
+  "version": "54.03.20",
   "frameworks": {
     "arduino": {
       "script": "builder/frameworks/arduino.py"
@@ -33,7 +33,7 @@
       "type": "framework",
       "optional": true,
       "owner": "espressif",
-      "version": "https://github.com/espressif/arduino-esp32/archive/refs/heads/release/v3.1.x.zip"
+      "version": "https://github.com/espressif/arduino-esp32/archive/refs/heads/master.zip"
     },
     "framework-arduinoespressif32-libs": {
       "type": "framework",
@@ -51,7 +51,7 @@
       "type": "framework",
       "optional": true,
       "owner": "pioarduino",
-      "version": "https://github.com/pioarduino/esp-idf/releases/download/v5.3.2.250210/esp-idf-v5.3.2.zip"
+      "version": "https://github.com/pioarduino/esp-idf/releases/download/v5.4.0.250221/esp-idf-v5.4.0.zip"
     },
     "xtensa-esp-elf": {
       "type": "toolchain",
@@ -92,7 +92,7 @@
     "tl-install": {
       "optional": false,
       "owner": "pioarduino",
-      "version": "https://github.com/pioarduino/esp_install/releases/download/v2.0.0/esp_install-v2.0.0.zip"
+      "version": "https://github.com/pioarduino/esp_install/releases/download/v3.0.0/esp_install-v3.0.0.zip"
     },
     "tool-scons": {
       "optional": true,
