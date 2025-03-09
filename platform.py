@@ -72,9 +72,9 @@ class Espressif32Platform(PlatformBase):
 
         # Enable debug tool gdb only when build debug is enabled
         if (variables.get("build_type") or "debug" in "".join(targets)) and tl_flag:
-            self.packages["riscv32-esp-elf-gdb"]["optional"] = False if mcu in ["esp32c2", "esp32c3", "esp32c6", "esp32h2"] else True
+            self.packages["riscv32-esp-elf-gdb"]["optional"] = False if mcu in ["esp32c2", "esp32c3", "esp32c5", "esp32c6", "esp32h2", "esp32p4"] else True
             self.packages["riscv32-esp-elf-gdb"]["version"] = "file://" + join(IDF_TOOLS_PATH_DEFAULT, "tools", "tl-rv-gdb")
-            self.packages["xtensa-esp-elf-gdb"]["optional"] = False if not mcu in ["esp32c2", "esp32c3", "esp32c6", "esp32h2"] else True
+            self.packages["xtensa-esp-elf-gdb"]["optional"] = False if not mcu in ["esp32c2", "esp32c3", "esp32c5", "esp32c6", "esp32h2", "esp32p4"] else True
             self.packages["xtensa-esp-elf-gdb"]["version"] = "file://" + join(IDF_TOOLS_PATH_DEFAULT, "tools", "tl-xt-gdb")
         else:
             self.packages["riscv32-esp-elf-gdb"]["optional"] = True
@@ -169,7 +169,7 @@ class Espressif32Platform(PlatformBase):
             self.packages["esp32ulp-elf"]["optional"] = False
             self.packages["esp32ulp-elf"]["version"] = tc_path
         # Enable RISC-V ULP toolchain for ESP32C6, ESP32S2, ESP32S3 when IDF is selected
-        if tl_flag and "espidf" in frameworks and mcu in ("esp32s2", "esp32s3", "esp32c6"):
+        if tl_flag and "espidf" in frameworks and mcu in ("esp32s2", "esp32s3", "esp32c5", "esp32c6", "esp32p4"):
             tc_path = "file://" + join(IDF_TOOLS_PATH_DEFAULT, "tools", "tc-rv32")
             self.packages["riscv32-esp-elf"]["optional"] = False
             self.packages["riscv32-esp-elf"]["version"] = tc_path
@@ -214,7 +214,7 @@ class Espressif32Platform(PlatformBase):
         # A special case for the Kaluga board that has a separate interface config
         if board.id == "esp32-s2-kaluga-1":
             supported_debug_tools.append("ftdi")
-        if board.get("build.mcu", "") in ("esp32c3", "esp32c6", "esp32s3", "esp32h2"):
+        if board.get("build.mcu", "") in ("esp32c3", "esp32c5", "esp32c6", "esp32s3", "esp32h2", "esp32p4"):
             supported_debug_tools.append("esp-builtin")
 
         upload_protocol = board.manifest.get("upload", {}).get("protocol")
