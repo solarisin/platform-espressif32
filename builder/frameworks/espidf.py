@@ -82,6 +82,7 @@ def install_standard_python_deps():
 
     deps = {
         "wheel": ">=0.35.1",
+        "rich-click": ">=1.8.6",
         "PyYAML": ">=6.0.2"
     }
 
@@ -1530,12 +1531,11 @@ def install_python_deps():
         # https://github.com/platformio/platformio-core/issues/4614
         "urllib3": "<2",
         # https://github.com/platformio/platform-espressif32/issues/635
-        "cryptography": "~=41.0.1" if IDF5 else ">=2.1.4,<35.0.0",
+        "cryptography": "~=41.0.1",
         "future": ">=0.18.3",
-        "pyparsing": ">=3.1.0,<4" if IDF5 else ">=2.0.3,<2.4.0",
-        "kconfiglib": "~=14.1.0" if IDF5 else "~=13.7.1",
-        "idf-component-manager": "~=2.0.1" if IDF5 else "~=1.0",
-        "esp-idf-kconfig": ">=1.4.2,<2.0.0"
+        "pyparsing": ">=3.1.0,<4",
+        "idf-component-manager": "~=2.0.1",
+        "esp-idf-kconfig": ">=2.5.0"
     }
 
     if sys_platform.system() == "Darwin" and "arm" in sys_platform.machine().lower():
@@ -2123,6 +2123,11 @@ if "arduino" in env.get("PIOFRAMEWORK") and "espidf" not in env.get("PIOFRAMEWOR
             shutil.move(join(arduino_libs,mcu,"sdkconfig"),join(arduino_libs,mcu,"sdkconfig.orig"))
         shutil.copyfile(join(env.subst("$PROJECT_DIR"),"sdkconfig."+env["PIOENV"]),join(arduino_libs,mcu,"sdkconfig"))
         shutil.copyfile(join(env.subst("$PROJECT_DIR"),"sdkconfig."+env["PIOENV"]),join(arduino_libs,"sdkconfig"))
+        try:
+            os.remove(join(env.subst("$PROJECT_DIR"),"dependencies.lock"))
+            os.remove(join(env.subst("$PROJECT_DIR"),"CMakeLists.txt"))
+        except:
+            pass
         print("*** Copied compiled %s IDF libraries to Arduino framework ***" % idf_variant)
 
         pio_exe_path = shutil.which("platformio"+(".exe" if IS_WINDOWS else ""))

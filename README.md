@@ -20,7 +20,7 @@ ESP32 is a series of low-cost, low-power system on a chip microcontrollers with 
 1. Configure a platform option in platformio.ini file:
 
 ### Stable Arduino
-currently espressif Arduino 3.1.3 and IDF 5.3.2.250210
+currently espressif Arduino 3.2.0 and IDF 5.4.1
 
 ```ini
 [env:stable]
@@ -39,8 +39,8 @@ board = ...
 ...
 ```
 
-### pioarduino only feature
-ESP32-solo1 and ESP32-C2 support via **Hybrid compile**
+### ESP32-solo1 and ESP32-C2 Arduino support (with pioarduino only feature: *Hybrid compile*)
+Example configuration:
 
 ```ini
 [env:esp32solo1]
