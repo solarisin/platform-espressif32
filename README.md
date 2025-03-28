@@ -1,6 +1,6 @@
 # pioarduino (p)eople (i)nitiated (o)ptimized (arduino)
 
-[![CI Examples](https://github.com/pioarduino/platform-espressif32/actions/workflows/examples.yml/badge.svg?branch=develop)](https://github.com/pioarduino/platform-espressif32/actions/workflows/examples.yml)
+[![Build Status](https://github.com/pioarduino/platform-espressif32/actions/workflows/examples.yml/badge.svg)](https://github.com/pioarduino/platform-espressif32/actions)
 [![Discord](https://img.shields.io/discord/1263397951829708871.svg?logo=discord&logoColor=white&color=5865F2&label=Discord)](https://discord.gg/Nutz9crnZr)
 [![GitHub Releases](https://img.shields.io/github/downloads/pioarduino/platform-espressif32/total?label=downloads)](https://github.com/pioarduino/platform-espressif32/releases/latest)
 
@@ -20,7 +20,7 @@ ESP32 is a series of low-cost, low-power system on a chip microcontrollers with 
 1. Configure a platform option in platformio.ini file:
 
 ### Stable Arduino
-currently espressif Arduino 3.2.0 and IDF 5.4.0.250327
+currently espressif Arduino 3.2.0 and IDF 5.4.1
 
 ```ini
 [env:stable]
@@ -44,13 +44,13 @@ Example configuration:
 
 ```ini
 [env:esp32solo1]
-platform = https://github.com/pioarduino/platform-espressif32.git#develop
+platform = https://github.com/pioarduino/platform-espressif32/releases/download/stable/platform-espressif32.zip
 framework = arduino
 board = esp32-solo1
 monitor_speed = 115200
 
 [env:esp32-c2-devkitm-1]
-platform = https://github.com/pioarduino/platform-espressif32.git#develop
+platform = https://github.com/pioarduino/platform-espressif32/releases/download/stable/platform-espressif32.zip
 framework = arduino
 board = esp32-c2-devkitm-1
 monitor_speed = 115200
