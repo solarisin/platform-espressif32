@@ -8,9 +8,9 @@ about: Create a Report to help us improve
 This issue template is meant to REPORT pioarduino caused PROBLEMS ONLY
 
 Please DO NOT OPEN AN ISSUE:
-  - If your problem is caused by a wrong or missing boards manifest, ask for help in [pioarduin Support Chat](https://discord.gg/Nutz9crnZr) and provide a PR to solve
+  - If your problem is caused by a wrong or missing boards manifest, ask for help in [pioarduin Support Chat](https://discord.gg/Nutz9crnZr) and please provide a PR to solve
   - If your pioarduino version is not the latest , please update, your issue might be fixed already
-  - If you have a problems or a general questions with Arduino core, please address it to the [Arduino Support Chat](https://discord.gg/8xY6e9crwv)
+  - If you have problems or general questions about the Arduino core, please address it to the [Arduino Support Chat](https://discord.gg/8xY6e9crwv)
   - If your issue is a flashing issue, please address it to the [pioarduin Support Chat](https://discord.gg/Nutz9crnZr)
   - If your issue is a compilation problem, please address it to the [pioarduino Support Chat](https://discord.gg/Nutz9crnZr)
   - If your issue has been addressed before (i.e., duplicated issue), please ask in the original issue
