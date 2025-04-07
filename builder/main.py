@@ -279,6 +279,8 @@ env.Replace(
     ],
     ERASECMD='"$PYTHONEXE" "$OBJCOPY" $ERASEFLAGS erase_flash',
 
+    lib_archive=False,
+
     # mkspiffs package contains two different binaries for IDF and Arduino
     MKFSTOOL="mk%s" % filesystem
     + (
