@@ -106,7 +106,12 @@ class Espressif32Platform(PlatformBase):
         # packages for IDF and mixed Arduino+IDF projects
         if tl_flag and "espidf" in frameworks:
             for p in self.packages:
-                if p in ("tool-scons", "tool-cmake", "tool-ninja"):
+                if p in (
+                    "tool-scons",
+                    "tool-cmake",
+                    "tool-ninja",
+                    "tool-esp-rom-elfs",
+                 ):
                     self.packages[p]["optional"] = False
 
         if "".join(targets) in ("upload", "buildfs", "uploadfs"):
