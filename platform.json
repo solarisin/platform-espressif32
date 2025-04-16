@@ -121,6 +121,11 @@
       "owner": "",
       "version": ""
     },
+    "tool-esp-rom-elfs": {
+       "optional": true,
+       "owner": "",
+       "version": "https://github.com/pioarduino/registry/releases/download/0.0.1/esp-rom-elfs-20241011.zip"
+    },
     "tool-mklittlefs": {
       "type": "uploader",
       "optional": true,
