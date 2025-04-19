@@ -231,7 +231,7 @@ def shorthen_includes(env, node):
     )
 
 def call_compile_libs():
-    if mcu == "esp32c2":
+    if mcu == "esp32c2" and "espidf" not in env.subst("$PIOFRAMEWORK"):
         ARDUINO_FRMWRK_C2_LIB_DIR = join(platform.get_package_dir("framework-arduinoespressif32-libs"),mcu)
         if not os.path.exists(ARDUINO_FRMWRK_C2_LIB_DIR):
             ARDUINO_C2_DIR = join(platform.get_package_dir("framework-arduino-c2-skeleton-lib"),mcu)
