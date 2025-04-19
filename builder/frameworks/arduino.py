@@ -28,7 +28,7 @@ import semantic_version
 import os
 import sys
 import shutil
-from os.path import join
+from os.path import join, exists
 
 from SCons.Script import COMMAND_LINE_TARGETS, DefaultEnvironment, SConscript
 from platformio import fs
@@ -240,6 +240,11 @@ def call_compile_libs():
     SConscript("espidf.py")
 
 if check_reinstall_frwrk() == True:
+    envs = [section.replace("env:", "") for section in config.sections() if section.startswith("env:")]
+    for env_name in envs:
+        file_path = join(env.subst("$PROJECT_DIR"), f"sdkconfig.{env_name}")
+        if exists(file_path):
+            os.remove(file_path)
     print("*** Reinstall Arduino framework ***")
     shutil.rmtree(platform.get_package_dir("framework-arduinoespressif32"))
     shutil.rmtree(platform.get_package_dir("framework-arduinoespressif32-libs"))
