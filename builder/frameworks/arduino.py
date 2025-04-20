@@ -230,6 +230,20 @@ def shorthen_includes(env, node):
         + shortened_includes,
     )
 
+# Check if framework = arduino, espidf is set -> compile Arduino as an component of IDF
+# using platformio.ini entry since we modify the framework env var for Hybrid Compile!
+def get_frameworks_in_current_env():
+    current_env_section = "env:" + env["PIOENV"]
+    if "framework" in config.options(current_env_section):
+        frameworks = config.get(current_env_section, "framework", "")
+        return frameworks
+    return []
+
+current_env_frameworks = get_frameworks_in_current_env()
+if "arduino" in current_env_frameworks and "espidf" in current_env_frameworks:
+    # Arduino as component is set, switch off Hybrid compile
+    flag_custom_sdkconfig = False
+
 def call_compile_libs():
     if mcu == "esp32c2":
         ARDUINO_FRMWRK_C2_LIB_DIR = join(platform.get_package_dir("framework-arduinoespressif32-libs"),mcu)
