@@ -68,9 +68,6 @@ class Espressif32Platform(PlatformBase):
         core_variant_build = (''.join(variables.get("build_flags", []))).replace("-D", " ")
         frameworks = variables.get("pioframework", [])
 
-        if variables.get("custom_sdkconfig") is not None:
-            frameworks.append("espidf")
-
         # Enable debug tool gdb only when build debug is enabled
         if (variables.get("build_type") or "debug" in "".join(targets)) and tl_flag:
             self.packages["riscv32-esp-elf-gdb"]["optional"] = False if mcu in ["esp32c2", "esp32c3", "esp32c5", "esp32c6", "esp32h2", "esp32p4"] else True
