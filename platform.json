@@ -6,13 +6,13 @@
   "license": "Apache-2.0",
   "keywords": [
     "dev-platform",
-    "Wi-Fi",
+    "WiFi",
     "Bluetooth",
     "Xtensa",
     "RISC-V"
   ],
   "engines": {
-    "platformio": ">=6.1.16"
+    "platformio": ">=6.1.18"
   },
   "repository": {
     "type": "git",
@@ -33,7 +33,7 @@
       "type": "framework",
       "optional": true,
       "owner": "espressif",
-      "version": "https://github.com/espressif/arduino-esp32/archive/refs/heads/master.zip"
+      "version": "https://github.com/espressif/arduino-esp32/archive/refs/heads/release/v3.3.x.zip"
     },
     "framework-arduinoespressif32-libs": {
       "type": "framework",
