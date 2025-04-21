@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 import subprocess
 import sys
@@ -24,6 +25,15 @@ from platformio.proc import get_pythonexe_path
 from platformio.project.config import ProjectConfig
 from platformio.package.manager.tool import ToolPackageManager
 
+def get_tool_version_from_platform_json(tool_name):
+    platform_json_path = os.path.join(ProjectConfig.get_instance().get("platformio", "platforms_dir"), "espressif32", "platform.json")
+    with open(platform_json_path, "r", encoding="utf-8") as file:
+        platform_data = json.load(file)
+    packages = platform_data.get("packages", {})
+    tool_info = packages[tool_name]
+    version = tool_info.get("version", "") # version is an URL!
+    return version
+
 IS_WINDOWS = sys.platform.startswith("win")
 # Set Platformio env var to use windows_amd64 for all windows architectures
 # only windows_amd64 native espressif toolchains are available
@@ -33,6 +43,16 @@ if IS_WINDOWS:
 
 python_exe = get_pythonexe_path()
 pm = ToolPackageManager()
+
+if not os.path.exists(os.path.join(ProjectConfig.get_instance().get("platformio", "packages_dir"), "tool-scons")):
+    scons_uri = get_tool_version_from_platform_json("tool-scons")
+    if scons_uri is not None:
+        pm.install(scons_uri)
+
+if not os.path.exists(os.path.join(ProjectConfig.get_instance().get("platformio", "packages_dir"), "tool-esp-rom-elfs")):
+    rom_uri = get_tool_version_from_platform_json("tool-esp-rom-elfs")
+    if rom_uri is not None:
+        pm.install(rom_uri)
 
 IDF_TOOLS_PATH_DEFAULT = os.path.join(os.path.expanduser("~"), ".espressif")
 IDF_TOOLS = os.path.join(ProjectConfig.get_instance().get("platformio", "packages_dir"), "tl-install", "tools", "idf_tools.py")
@@ -53,7 +73,6 @@ if (tl_flag and not bool(os.path.exists(join(IDF_TOOLS_PATH_DEFAULT, "tools"))))
         for p in ("tool-mklittlefs", "tool-mkfatfs", "tool-mkspiffs", "tool-dfuutil", "tool-openocd", "tool-cmake", "tool-ninja", "tool-cppcheck", "tool-clangtidy", "tool-pvs-studio", "tc-xt-esp32", "tc-ulp", "tc-rv32", "tl-xt-gdb", "tl-rv-gdb", "contrib-piohome", "contrib-pioremote"):
             tl_path = "file://" + join(IDF_TOOLS_PATH_DEFAULT, "tools", p)
             pm.install(tl_path)
-            pm.install("tool-scons")
 
 class Espressif32Platform(PlatformBase):
     def configure_default_packages(self, variables, targets):
@@ -67,6 +86,13 @@ class Espressif32Platform(PlatformBase):
         core_variant_board = core_variant_board.replace("-D", " ")
         core_variant_build = (''.join(variables.get("build_flags", []))).replace("-D", " ")
         frameworks = variables.get("pioframework", [])
+
+        if variables.get("custom_sdkconfig") is not None:
+            frameworks.append("espidf")
+
+        if variables.get("custom_sdkconfig") is not None or len(str(board_sdkconfig)) > 3:
+            frameworks.append("espidf")
+            self.packages["framework-espidf"]["optional"] = False
 
         # Enable debug tool gdb only when build debug is enabled
         if (variables.get("build_type") or "debug" in "".join(targets)) and tl_flag:
