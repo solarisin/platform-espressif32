@@ -46,6 +46,10 @@ class Espressif32Platform(PlatformBase):
         if "arduino" in frameworks:
             self.packages["framework-arduinoespressif32"]["optional"] = False
             self.packages["framework-arduinoespressif32-libs"]["optional"] = False
+            try:
+                self.packages["framework-arduinoespressif32"]["version"] = "https://github.com/espressif/arduino-esp32/archive/refs/heads/idf-master.zip"
+            except:
+                pass
             # use matching espressif Arduino libs
             #URL = "https://raw.githubusercontent.com/espressif/arduino-esp32/release/v3.3.x/package/package_esp32_index.template.json"
             #packjdata = requests.get(URL).json()
