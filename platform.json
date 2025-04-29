@@ -18,7 +18,7 @@
     "type": "git",
     "url": "https://github.com/pioarduino/platform-espressif32.git"
   },
-  "version": "55.03.30+develop",
+  "version": "55.03.30+alpha",
   "frameworks": {
     "arduino": {
       "script": "builder/frameworks/arduino.py"
@@ -39,7 +39,7 @@
       "type": "framework",
       "optional": true,
       "owner": "espressif",
-      "version": ""
+      "version": "https://github.com/espressif/esp32-arduino-lib-builder/releases/download/idf-master/esp32-arduino-libs-idf-master-d930a386-v1.zip"
     },
     "framework-arduino-c2-skeleton-lib": {
       "type": "framework",
