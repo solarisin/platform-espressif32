@@ -71,7 +71,7 @@
       "owner": "platformio",
       "version": "~1.23800.0"
     },
-      "tool-xtensa-esp-elf-gdb": {
+    "tool-xtensa-esp-elf-gdb": {
       "type": "debugger",
       "optional": true,
       "owner": "platformio",
