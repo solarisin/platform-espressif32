@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import requests
 import subprocess
 import sys
 import shutil
