@@ -131,7 +131,6 @@ class Espressif32Platform(PlatformBase):
             else:
                 # use branch master
                 URL = "https://raw.githubusercontent.com/espressif/arduino-esp32/master/package/package_esp32_index.template.json"
-                req = requests.get(URL)
                 packjdata = requests.get(URL).json()
                 dyn_lib_url = packjdata['packages'][0]['tools'][0]['systems'][0]['url']
                 self.packages["framework-arduinoespressif32-libs"]["version"] = dyn_lib_url
