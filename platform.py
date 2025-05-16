@@ -120,18 +120,21 @@ class Espressif32Platform(PlatformBase):
         if "arduino" in frameworks:
             self.packages["framework-arduinoespressif32"]["optional"] = False
             self.packages["framework-arduinoespressif32-libs"]["optional"] = False
-            # use newer branch idf-release/v5.4 when existing
-            self.packages["framework-arduinoespressif32"]["version"] = "https://github.com/espressif/arduino-esp32/archive/refs/heads/idf-release/v5.4.zip"
+            
             URL = "https://raw.githubusercontent.com/espressif/arduino-esp32/idf-release/v5.4/package/package_esp32_index.template.json"
             req = requests.get(URL)
             if req.status_code == 200:
                 packjdata = req.json()
+                self.packages["framework-arduinoespressif32"]["version"] = "https://github.com/espressif/arduino-esp32/archive/refs/heads/idf-release/v5.4.zip"
+                dyn_lib_url = packjdata['packages'][0]['tools'][0]['systems'][0]['url']
+                self.packages["framework-arduinoespressif32-libs"]["version"] = dyn_lib_url
             else:
                 # use branch master
                 URL = "https://raw.githubusercontent.com/espressif/arduino-esp32/master/package/package_esp32_index.template.json"
+                req = requests.get(URL)
                 packjdata = requests.get(URL).json()
-            dyn_lib_url = packjdata['packages'][0]['tools'][0]['systems'][0]['url']
-            self.packages["framework-arduinoespressif32-libs"]["version"] = dyn_lib_url
+                dyn_lib_url = packjdata['packages'][0]['tools'][0]['systems'][0]['url']
+                self.packages["framework-arduinoespressif32-libs"]["version"] = dyn_lib_url
 
         if variables.get("custom_sdkconfig") is not None or len(str(board_sdkconfig)) > 3:
             frameworks.append("espidf")
