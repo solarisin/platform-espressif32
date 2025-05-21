@@ -21,6 +21,9 @@ from SCons.Script import (
     DefaultEnvironment)
 
 from platformio.util import get_serial_ports
+from platformio.project.helpers import get_project_dir
+
+import os
 
 env = DefaultEnvironment()
 platform = env.PioPlatform()
@@ -68,11 +71,9 @@ def _normalize_frequency(frequency):
     frequency = str(frequency).replace("L", "")
     return str(int(int(frequency) / 1000000)) + "m"
 
-
 def _get_board_f_flash(env):
     frequency = env.subst("$BOARD_F_FLASH")
     return _normalize_frequency(frequency)
-
 
 def _get_board_f_image(env):
     board_config = env.BoardConfig()
@@ -88,7 +89,6 @@ def _get_board_f_boot(env):
 
     return _get_board_f_flash(env)
 
-
 def _get_board_flash_mode(env):
     if _get_board_memory_type(env) in (
         "opi_opi",
@@ -101,14 +101,12 @@ def _get_board_flash_mode(env):
         return "dio"
     return mode
 
-
 def _get_board_boot_mode(env):
     memory_type = env.BoardConfig().get("build.arduino.memory_type", "")
     build_boot = env.BoardConfig().get("build.boot", "$BOARD_FLASH_MODE")
     if memory_type in ("opi_opi", "opi_qspi"):
         build_boot = "opi"
     return build_boot
-
 
 def _parse_size(value):
     if isinstance(value, int):
@@ -121,7 +119,6 @@ def _parse_size(value):
         base = 1024 if value[-1].upper() == "K" else 1024 * 1024
         return int(value[:-1]) * base
     return value
-
 
 def _parse_partitions(env):
     partitions_csv = env.subst("$PARTITIONS_TABLE_CSV")
@@ -163,7 +160,6 @@ def _parse_partitions(env):
     env["INTEGRATION_EXTRA_DATA"].update({"application_offset": str(hex(app_offset))})
     return result
 
-
 def _update_max_upload_size(env):
     if not env.get("PARTITIONS_TABLE_CSV"):
         return
@@ -192,16 +188,12 @@ def _update_max_upload_size(env):
             board.update("upload.maximum_size", _parse_size(p["size"]))
             break
 
-
-
 def _to_unix_slashes(path):
     return path.replace("\\", "/")
-
 
 #
 # Filesystem helpers
 #
-
 
 def fetch_fs_size(env):
     fs = None
@@ -226,17 +218,15 @@ def fetch_fs_size(env):
         env["FS_START"] += 4096
         env["FS_SIZE"] -= 4096
 
-
 def __fetch_fs_size(target, source, env):
     fetch_fs_size(env)
     return (target, source)
-
 
 board = env.BoardConfig()
 mcu = board.get("build.mcu", "esp32")
 toolchain_arch = "xtensa-%s" % mcu
 filesystem = board.get("build.filesystem", "spiffs")
-if mcu in ("esp32c2", "esp32c3", "esp32c6", "esp32h2", "esp32p4"):
+if mcu in ("esp32c2", "esp32c3", "esp32c5", "esp32c6", "esp32h2", "esp32p4"):
     toolchain_arch = "riscv32-esp"
 
 if "INTEGRATION_EXTRA_DATA" not in env:
@@ -257,7 +247,7 @@ env.Replace(
     GDB=join(
         platform.get_package_dir(
             "tool-riscv32-esp-elf-gdb"
-            if mcu in ("esp32c2", "esp32c3", "esp32c6", "esp32h2", "esp32p4")
+            if mcu in ("esp32c2", "esp32c3", "esp32c5", "esp32c6", "esp32h2", "esp32p4")
             else "tool-xtensa-esp-elf-gdb"
         )
         or "",
@@ -367,6 +357,24 @@ env.Append(
 if not env.get("PIOFRAMEWORK"):
     env.SConscript("frameworks/_bare.py", exports="env")
 
+
+def firmware_metrics(target, source, env):
+    map_file = os.path.join(env.subst("$BUILD_DIR"), env.subst("$PROGNAME") + ".map")
+    if not os.path.isfile(map_file):
+        # map file can be in project dir
+        map_file = os.path.join(get_project_dir(), env.subst("$PROGNAME") + ".map")
+
+    if os.path.isfile(map_file):
+        try:
+            import subprocess
+            # Show output of esp_idf_size, but suppresses the command echo
+            subprocess.run([
+                env.subst("$PYTHONEXE"), "-m", "esp_idf_size", "--ng", map_file
+            ], check=False)
+        except Exception:
+            print("Warning: Failed to run firmware metrics. Is esp-idf-size installed?")
+            pass
+
 #
 # Target: Build executable and linkable firmware or FS image
 #
@@ -381,6 +389,9 @@ if "nobuild" in COMMAND_LINE_TARGETS:
         target_firm = join("$BUILD_DIR", "${PROGNAME}.bin")
 else:
     target_elf = env.BuildProgram()
+    silent_action = env.Action(firmware_metrics)
+    silent_action.strfunction = lambda target, source, env: '' # hack to silence scons command output
+    env.AddPostAction(target_elf, silent_action)
     if set(["buildfs", "uploadfs", "uploadfsota"]) & set(COMMAND_LINE_TARGETS):
         target_firm = env.DataToBin(
             join("$BUILD_DIR", "${ESP32_FS_IMAGE_NAME}"), "$PROJECT_DATA_DIR"
@@ -564,6 +575,7 @@ elif upload_protocol == "custom":
 
 else:
     sys.stderr.write("Warning! Unknown upload protocol %s\n" % upload_protocol)
+
 
 env.AddPlatformTarget("upload", target_firm, upload_actions, "Upload")
 env.AddPlatformTarget("uploadfs", target_firm, upload_actions, "Upload Filesystem Image")
