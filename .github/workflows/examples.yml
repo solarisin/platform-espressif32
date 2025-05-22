@@ -23,7 +23,7 @@ jobs:
           - "examples/arduino-NimBLE-ext_client"
           - "examples/arduino-matter-light"
           - "examples/tasmota"
-          #- "examples/espidf-arduino-matter-light"
+          - "examples/espidf-arduino-matter-light"
           - "examples/espidf-arduino-blink"
           - "examples/espidf-arduino-littlefs"
           - "examples/espidf-blink"
@@ -57,5 +57,5 @@ jobs:
           git clone -b development --depth 1 https://github.com/arendst/Tasmota.git examples/tasmota
           cp examples/tasmota_platformio_override.ini examples/tasmota/platformio_override.ini
       - name: Build examples
-        if: "matrix.example != 'examples/tasmota' || matrix.os != 'windows-latest'"
+        if: "matrix.example != 'examples/espidf-arduino-matter-light' || matrix.os != 'windows-latest'"
         run: pio run -d ${{ matrix.example }}
