@@ -77,7 +77,6 @@ class Espressif32Platform(PlatformBase):
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL
                     ).returncode
-                rc = subprocess.run(IDF_TOOLS_CMD).returncode
                 if rc != 0:
                     sys.stderr.write("Error: Couldn't execute 'idf_tools.py install'\n")
                 else:
