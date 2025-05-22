@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import contextlib
 import requests
 import json
 import subprocess
@@ -68,6 +69,14 @@ class Espressif32Platform(PlatformBase):
             json_flag = bool(os.path.exists(TOOLS_JSON_PATH))
             pio_flag = bool(os.path.exists(TOOLS_PIO_PATH))
             if tl_flag and json_flag:
+                with open(os.devnull, 'w') as devnull, \
+                     contextlib.redirect_stdout(devnull), \
+                     contextlib.redirect_stderr(devnull):
+                    rc = subprocess.run(
+                        IDF_TOOLS_CMD,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    ).returncode
                 rc = subprocess.run(IDF_TOOLS_CMD).returncode
                 if rc != 0:
                     sys.stderr.write("Error: Couldn't execute 'idf_tools.py install'\n")
@@ -276,7 +285,7 @@ class Espressif32Platform(PlatformBase):
         # A special case for the Kaluga board that has a separate interface config
         if board.id == "esp32-s2-kaluga-1":
             supported_debug_tools.append("ftdi")
-        if board.get("build.mcu", "") in ("esp32c3", "esp32c6", "esp32s3", "esp32h2"):
+        if board.get("build.mcu", "") in ("esp32c3", "esp32c5", "esp32c6", "esp32s3", "esp32h2", "esp32p4"):
             supported_debug_tools.append("esp-builtin")
 
         upload_protocol = board.manifest.get("upload", {}).get("protocol")
