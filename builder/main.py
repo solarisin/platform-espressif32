@@ -225,7 +225,7 @@ def __fetch_fs_size(target, source, env):
 board = env.BoardConfig()
 mcu = board.get("build.mcu", "esp32")
 toolchain_arch = "xtensa-%s" % mcu
-filesystem = board.get("build.filesystem", "spiffs")
+filesystem = board.get("build.filesystem", "littlefs")
 if mcu in ("esp32c2", "esp32c3", "esp32c5", "esp32c6", "esp32h2", "esp32p4"):
     toolchain_arch = "riscv32-esp"
 
@@ -306,7 +306,7 @@ def check_lib_archive_exists():
             return True
     #print("lib_archive was not found in platformio.ini")
     return False
- 
+
 if not check_lib_archive_exists():
     env_section = "env:" + env["PIOENV"]
     projectconfig.set(env_section, "lib_archive", "False")
@@ -367,10 +367,13 @@ def firmware_metrics(target, source, env):
     if os.path.isfile(map_file):
         try:
             import subprocess
+            python_exe = env.subst("$PYTHONEXE")
+            run_env = os.environ.copy()
+            run_env["PYTHONIOENCODING"] = "utf-8"
             # Show output of esp_idf_size, but suppresses the command echo
             subprocess.run([
-                env.subst("$PYTHONEXE"), "-m", "esp_idf_size", "--ng", map_file
-            ], check=False)
+                python_exe, "-m", "esp_idf_size", "--ng", map_file
+            ], env=run_env, check=False)
         except Exception:
             print("Warning: Failed to run firmware metrics. Is esp-idf-size installed?")
             pass
