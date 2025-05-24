@@ -14,7 +14,7 @@
 
 import os
 import re
-import sys
+import locale
 from os.path import isfile, join
 
 from SCons.Script import (
@@ -28,7 +28,7 @@ from platformio.project.helpers import get_project_dir
 env = DefaultEnvironment()
 platform = env.PioPlatform()
 projectconfig = env.GetProjectConfig()
-IS_WINDOWS = sys.platform.startswith("win")
+terminal_cp = locale.getpreferredencoding().lower()
 
 #
 # Helpers
@@ -360,6 +360,9 @@ if not env.get("PIOFRAMEWORK"):
 
 
 def firmware_metrics(target, source, env):
+    if terminal_cp != "utf-8":
+        print("Firmware metrics can not be shown. Set the terminal codepage to \"utf-8\"")
+        return
     map_file = os.path.join(env.subst("$BUILD_DIR"), env.subst("$PROGNAME") + ".map")
     if not os.path.isfile(map_file):
         # map file can be in project dir
@@ -371,6 +374,7 @@ def firmware_metrics(target, source, env):
             python_exe = env.subst("$PYTHONEXE")
             run_env = os.environ.copy()
             run_env["PYTHONIOENCODING"] = "utf-8"
+            run_env["PYTHONUTF8"] = "1"
             # Show output of esp_idf_size, but suppresses the command echo
             subprocess.run([
                 python_exe, "-m", "esp_idf_size", "--ng", map_file
@@ -393,11 +397,9 @@ if "nobuild" in COMMAND_LINE_TARGETS:
         target_firm = join("$BUILD_DIR", "${PROGNAME}.bin")
 else:
     target_elf = env.BuildProgram()
-    # python charmap is crashing with Windows and esp-idf-size
-    if not IS_WINDOWS:
-        silent_action = env.Action(firmware_metrics)
-        silent_action.strfunction = lambda target, source, env: '' # hack to silence scons command output
-        env.AddPostAction(target_elf, silent_action)
+    silent_action = env.Action(firmware_metrics)
+    silent_action.strfunction = lambda target, source, env: '' # hack to silence scons command output
+    env.AddPostAction(target_elf, silent_action)
     if set(["buildfs", "uploadfs", "uploadfsota"]) & set(COMMAND_LINE_TARGETS):
         target_firm = env.DataToBin(
             join("$BUILD_DIR", "${ESP32_FS_IMAGE_NAME}"), "$PROJECT_DATA_DIR"
@@ -531,7 +533,6 @@ elif upload_protocol == "dfu":
         ],
         UPLOADCMD='"$UPLOADER" $UPLOADERFLAGS "$SOURCE"',
     )
-
 
 elif upload_protocol in debug_tools:
     _parse_partitions(env)
