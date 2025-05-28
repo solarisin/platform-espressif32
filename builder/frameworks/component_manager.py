@@ -22,7 +22,7 @@ class ComponentManager:
         self.ignored_libs: Set[str] = set()
         
         self.arduino_framework_dir = self.platform.get_package_dir("framework-arduinoespressif32")
-        self.arduino_libs_mcu = join(self.arduino_framework_dir, "tools", "esp32-arduino-libs", self.mcu)
+        self.arduino_libs_mcu = join(self.platform.get_package_dir("framework-arduinoespressif32-libs", self.mcu)
     
     def handle_component_settings(self, add_components: bool = False, remove_components: bool = False) -> None:
         """Handle adding and removing IDF components based on project configuration."""
