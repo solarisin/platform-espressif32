@@ -293,12 +293,15 @@ def safe_framework_cleanup():
             logging.info(f"Framework path validated successfully: {FRAMEWORK_DIR}")
             
             if safe_delete_directory(FRAMEWORK_DIR):
-                #print("Framework successfully removed")
+                print("Framework successfully removed")
+            else:
+                print("Error removing framework")
+                return False
         else:
             logging.error(f"PlatformIO path validation failed: {FRAMEWORK_DIR}")
             return False
 
-        logging.info(f"Attempting to validate framework path: {FRAMEWORK_LIB_DIR}")
+        logging.info(f"Attempting to validate framework lib path: {FRAMEWORK_LIB_DIR}")
         
         # Use specialized PlatformIO path validation
         if validate_platformio_path(FRAMEWORK_LIB_DIR):
@@ -306,7 +309,7 @@ def safe_framework_cleanup():
             logging.info(f"Framework lib path validated successfully: {FRAMEWORK_LIB_DIR}")
             
             if safe_delete_directory(FRAMEWORK_LIB_DIR):
-                #print("Framework successfully removed")
+                print("Framework libs successfully removed")
                 return True
             else:
                 print("Error removing framework")
