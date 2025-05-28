@@ -220,9 +220,10 @@ def validate_platformio_path(path: Union[str, Path]) -> bool:
     # Must be framework-related
     framework_indicators = [
         "framework-arduinoespressif32",
-        "esp32-arduino-libs",
         ".platformio/packages",
-        "packages/framework-arduinoespressif32"
+        "packages/framework-arduinoespressif32",
+        "packages/framework-arduinoespressif32-libs",
+        "packages/framework-arduino-c2-skeleton-lib"
     ]
     
     if not any(indicator in path_str for indicator in framework_indicators):
