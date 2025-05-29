@@ -355,6 +355,9 @@ flag_custom_component_remove = False
 flag_custom_component_add = False
 flag_lib_ignore = False
 
+if mcu == "esp32c2":
+    flag_custom_sdkconfig = True
+
 # pio lib_ignore check
 if config.has_option(current_env_section, "lib_ignore"):
     flag_lib_ignore = True
@@ -681,8 +684,6 @@ if check_reinstall_frwrk():
         logging.error("Framework cleanup failed - installation aborted")
         sys.exit(1)
 
-if mcu == "esp32c2":
-    flag_custom_sdkconfig = True
 if flag_custom_sdkconfig and not flag_any_custom_sdkconfig:
     call_compile_libs()
 
