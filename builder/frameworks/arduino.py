@@ -683,7 +683,7 @@ if check_reinstall_frwrk():
 
 if mcu == "esp32c2":
     flag_custom_sdkconfig = True
-elif flag_custom_sdkconfig and not flag_any_custom_sdkconfig:
+if flag_custom_sdkconfig and not flag_any_custom_sdkconfig:
     call_compile_libs()
 
 # Main logic for Arduino Framework
