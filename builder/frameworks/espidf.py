@@ -159,7 +159,7 @@ if "arduino" in env.subst("$PIOFRAMEWORK"):
     ARDUINO_FRAMEWORK_DIR = platform.get_package_dir("framework-arduinoespressif32")
     ARDUINO_FRMWRK_LIB_DIR = platform.get_package_dir("framework-arduinoespressif32-libs")
     if mcu == "esp32c2":
-        ARDUINO_FRMWRK_C2_LIB_DIR = join(platform.get_package_dir("framework-arduinoespressif32-libs"),mcu)
+        ARDUINO_FRMWRK_C2_LIB_DIR = join(ARDUINO_FRMWRK_LIB_DIR, mcu)
         if not os.path.exists(ARDUINO_FRMWRK_C2_LIB_DIR):
             ARDUINO_C2_DIR = join(platform.get_package_dir("framework-arduino-c2-skeleton-lib"),mcu)
             shutil.copytree(ARDUINO_C2_DIR, ARDUINO_FRMWRK_C2_LIB_DIR, dirs_exist_ok=True)
