@@ -172,7 +172,7 @@ if "arduino" in env.subst("$PIOFRAMEWORK"):
         os.rename(ARDUINO_FRAMEWORK_DIR, new_path)
         ARDUINO_FRAMEWORK_DIR = new_path
     assert ARDUINO_FRAMEWORK_DIR and os.path.isdir(ARDUINO_FRAMEWORK_DIR)
-    arduino_libs_mcu = join(ARDUINO_FRAMEWORK_DIR,"tools","esp32-arduino-libs",mcu)
+    arduino_libs_mcu = join(platform.get_package_dir("framework-arduinoespressif32-libs"),mcu)
 
 BUILD_DIR = env.subst("$BUILD_DIR")
 PROJECT_DIR = env.subst("$PROJECT_DIR")
@@ -294,7 +294,7 @@ def HandleArduinoIDFsettings(env):
 
     def write_sdkconfig_file(idf_config_flags, checksum_source):
         """Write the final sdkconfig.defaults file with checksum."""
-        sdkconfig_src = join(ARDUINO_FRAMEWORK_DIR, "tools", "esp32-arduino-libs", mcu, "sdkconfig")
+        sdkconfig_src = join(arduino_libs_mcu, "sdkconfig")
         sdkconfig_dst = join(PROJECT_DIR, "sdkconfig.defaults")
         
         # Generate checksum for validation (maintains original logic)
