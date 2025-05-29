@@ -30,6 +30,7 @@ import sys
 import shutil
 import hashlib
 import logging
+import threading
 from contextlib import suppress
 from os.path import join, exists, isabs, splitdrive, commonpath, relpath
 from pathlib import Path
@@ -81,7 +82,8 @@ UNICORE_FLAGS = {
     "CONFIG_FREERTOS_UNICORE=y"
 }
 
-# Global flags to prevent message spam
+# Thread-safe global flags to prevent message spam
+_PATH_SHORTENING_LOCK = threading.Lock()
 _PATH_SHORTENING_MESSAGES = {
     'shortening_applied': False,
     'no_framework_paths_warning': False,
@@ -95,6 +97,7 @@ class PathCache:
         self.platform = platform
         self.mcu = mcu
         self._framework_dir = None
+        self._framework_lib_dir = None
         self._sdk_dir = None
     
     @property
@@ -104,7 +107,7 @@ class PathCache:
         return self._framework_dir
 
     @property
-    def framework_dir(self):
+    def framework_lib_dir(self):
         if self._framework_lib_dir is None:
             self._framework_lib_dir = self.platform.get_package_dir("framework-arduinoespressif32-libs")
         return self._framework_lib_dir
@@ -119,32 +122,33 @@ class PathCache:
 
 def check_and_warn_long_path_support():
     """Checks Windows long path support and issues warning if disabled"""
-    if not IS_WINDOWS or _PATH_SHORTENING_MESSAGES['long_path_warning_shown']:
-        return
+    with _PATH_SHORTENING_LOCK:  # Thread-safe access
+        if not IS_WINDOWS or _PATH_SHORTENING_MESSAGES['long_path_warning_shown']:
+            return
+            
+        try:
+            import winreg
+            key = winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SYSTEM\CurrentControlSet\Control\FileSystem"
+            )
+            value, _ = winreg.QueryValueEx(key, "LongPathsEnabled")
+            winreg.CloseKey(key)
+            
+            if value != 1:
+                print("*** WARNING: Windows Long Path Support is disabled ***")
+                print("*** Enable it for better performance: ***")
+                print("*** 1. Run as Administrator: gpedit.msc ***")
+                print("*** 2. Navigate to: Computer Configuration > Administrative Templates > System > Filesystem ***")
+                print("*** 3. Enable 'Enable Win32 long paths' ***")
+                print("*** OR run PowerShell as Admin: ***")
+                print("*** New-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem' -Name 'LongPathsEnabled' -Value 1 -PropertyType DWORD -Force ***")
+                print("*** Restart required after enabling ***")
+        except Exception:
+            print("*** WARNING: Could not check Long Path Support status ***")
+            print("*** Consider enabling Windows Long Path Support for better performance ***")
         
-    try:
-        import winreg
-        key = winreg.OpenKey(
-            winreg.HKEY_LOCAL_MACHINE,
-            r"SYSTEM\CurrentControlSet\Control\FileSystem"
-        )
-        value, _ = winreg.QueryValueEx(key, "LongPathsEnabled")
-        winreg.CloseKey(key)
-        
-        if value != 1:
-            print("*** WARNING: Windows Long Path Support is disabled ***")
-            print("*** Enable it for better performance: ***")
-            print("*** 1. Run as Administrator: gpedit.msc ***")
-            print("*** 2. Navigate to: Computer Configuration > Administrative Templates > System > Filesystem ***")
-            print("*** 3. Enable 'Enable Win32 long paths' ***")
-            print("*** OR run PowerShell as Admin: ***")
-            print("*** New-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem' -Name 'LongPathsEnabled' -Value 1 -PropertyType DWORD -Force ***")
-            print("*** Restart required after enabling ***")
-    except Exception:
-        print("*** WARNING: Could not check Long Path Support status ***")
-        print("*** Consider enabling Windows Long Path Support for better performance ***")
-    
-    _PATH_SHORTENING_MESSAGES['long_path_warning_shown'] = True
+        _PATH_SHORTENING_MESSAGES['long_path_warning_shown'] = True
 
 # Secure deletion functions
 def safe_delete_file(file_path: Union[str, Path], 
@@ -204,34 +208,37 @@ def safe_delete_directory(dir_path: Union[str, Path]) -> bool:
 
 def validate_platformio_path(path: Union[str, Path]) -> bool:
     """
-    Special validation for PlatformIO package paths
+    Enhanced validation for PlatformIO package paths
     """
-    path = Path(path).resolve()
-    path_str = str(path)
-    
-    # Must be within .platformio directory structure
-    if ".platformio" not in path_str:
-        return False
-    
-    # Must be a packages directory
-    if "packages" not in path_str:
-        return False
+    try:
+        path = Path(path).resolve()
+        path_str = str(path)
         
-    # Must be framework-related
-    framework_indicators = [
-        "framework-arduinoespressif32",
-        ".platformio/packages",
-        "packages/framework-arduinoespressif32",
-        "packages/framework-arduinoespressif32-libs",
-        "packages/framework-arduino-c2-skeleton-lib"
-    ]
-    
-    if not any(indicator in path_str for indicator in framework_indicators):
+        # Must be within .platformio directory structure
+        if ".platformio" not in path_str:
+            return False
+        
+        # Must be a packages directory
+        if "packages" not in path_str:
+            return False
+            
+        # Must be framework-related
+        framework_indicators = [
+            "framework-arduinoespressif32",
+            "framework-arduinoespressif32-libs",
+            "framework-arduino-c2-skeleton-lib"
+        ]
+        
+        if not any(indicator in path_str for indicator in framework_indicators):
+            return False
+        
+        # Must not be a critical system path
+        critical_paths = ["/usr", "/bin", "/sbin", "/etc", "/boot", "C:\\Windows", "C:\\Program Files"]
+        return not any(critical in path_str for critical in critical_paths)
+        
+    except Exception as e:
+        logging.error(f"Path validation error: {e}")
         return False
-    
-    # Must not be a critical system path
-    critical_paths = ["/usr", "/bin", "/sbin", "/etc", "/boot"]
-    return not any(critical in path_str for critical in critical_paths)
 
 def validate_deletion_path(path: Union[str, Path], 
                           allowed_patterns: List[str]) -> bool:
@@ -281,43 +288,42 @@ def validate_deletion_path(path: Union[str, Path],
     return is_allowed
 
 def safe_framework_cleanup():
-    """Secure cleanup of Arduino Framework"""
+    """Secure cleanup of Arduino Framework with enhanced error handling"""
+    success = True
     
-    # Secure deletion of framework directories
+    # Framework directory cleanup
     if exists(FRAMEWORK_DIR):
         logging.info(f"Attempting to validate framework path: {FRAMEWORK_DIR}")
         
-        # Use specialized PlatformIO path validation
         if validate_platformio_path(FRAMEWORK_DIR):
-            #print("*** Secure framework cleanup ***")
             logging.info(f"Framework path validated successfully: {FRAMEWORK_DIR}")
             
             if safe_delete_directory(FRAMEWORK_DIR):
                 print("Framework successfully removed")
             else:
                 print("Error removing framework")
-                return False
+                success = False
         else:
             logging.error(f"PlatformIO path validation failed: {FRAMEWORK_DIR}")
-            return False
-
+            success = False
+    
+    # Framework libs directory cleanup
+    if exists(FRAMEWORK_LIB_DIR):
         logging.info(f"Attempting to validate framework lib path: {FRAMEWORK_LIB_DIR}")
         
-        # Use specialized PlatformIO path validation
         if validate_platformio_path(FRAMEWORK_LIB_DIR):
-            #print("*** Secure framework cleanup ***")
             logging.info(f"Framework lib path validated successfully: {FRAMEWORK_LIB_DIR}")
             
             if safe_delete_directory(FRAMEWORK_LIB_DIR):
                 print("Framework libs successfully removed")
-                return True
             else:
-                print("Error removing framework")
-                return False
+                print("Error removing framework libs")
+                success = False
         else:
             logging.error(f"PlatformIO path validation failed: {FRAMEWORK_LIB_DIR}")
-            return False
-    return True
+            success = False
+    
+    return success
 
 def safe_remove_sdkconfig_files():
     """Secure removal of SDKConfig files"""
@@ -499,9 +505,17 @@ def is_framework_subfolder(potential_subfolder):
         return False
     return commonpath([FRAMEWORK_SDK_DIR]) == commonpath([FRAMEWORK_SDK_DIR, potential_subfolder])
 
+# Performance optimization with caching
 def calculate_include_path_length(includes):
-    """Calculate total character count of all include paths"""
-    return sum(len(str(inc)) for inc in includes)
+    """Calculate total character count of all include paths with caching"""
+    if not hasattr(calculate_include_path_length, '_cache'):
+        calculate_include_path_length._cache = {}
+    
+    cache_key = tuple(includes)
+    if cache_key not in calculate_include_path_length._cache:
+        calculate_include_path_length._cache[cache_key] = sum(len(str(inc)) for inc in includes)
+    
+    return calculate_include_path_length._cache[cache_key]
 
 def analyze_path_distribution(includes):
     """Analyze the distribution of include path lengths for optimization insights"""
@@ -581,20 +595,21 @@ def apply_include_shortening(env, node, includes, total_length):
         else:
             generic_includes.append(inc)
 
-    # Show result message only once
-    if not _PATH_SHORTENING_MESSAGES['shortening_applied']:
-        if shortened_includes:
-            new_total_length = original_length - saved_chars + len(f"-iprefix{FRAMEWORK_SDK_DIR}")
-            print(f"*** Applied include path shortening for {len(shortened_includes)} framework paths ***")
-            print(f"*** Path length reduced from {original_length} to ~{new_total_length} characters ***")
-            print(f"*** Estimated savings: {saved_chars} characters ***")
-        else:
-            if not _PATH_SHORTENING_MESSAGES['no_framework_paths_warning']:
-                print("*** Warning: Path length high but no framework paths found for shortening ***")
-                print("*** This may indicate an architecture-specific issue ***")
-                print("*** Run with -v (verbose) for detailed path analysis ***")
-                _PATH_SHORTENING_MESSAGES['no_framework_paths_warning'] = True
-        _PATH_SHORTENING_MESSAGES['shortening_applied'] = True
+    # Show result message only once with thread safety
+    with _PATH_SHORTENING_LOCK:
+        if not _PATH_SHORTENING_MESSAGES['shortening_applied']:
+            if shortened_includes:
+                new_total_length = original_length - saved_chars + len(f"-iprefix{FRAMEWORK_SDK_DIR}")
+                print(f"*** Applied include path shortening for {len(shortened_includes)} framework paths ***")
+                print(f"*** Path length reduced from {original_length} to ~{new_total_length} characters ***")
+                print(f"*** Estimated savings: {saved_chars} characters ***")
+            else:
+                if not _PATH_SHORTENING_MESSAGES['no_framework_paths_warning']:
+                    print("*** Warning: Path length high but no framework paths found for shortening ***")
+                    print("*** This may indicate an architecture-specific issue ***")
+                    print("*** Run with -v (verbose) for detailed path analysis ***")
+                    _PATH_SHORTENING_MESSAGES['no_framework_paths_warning'] = True
+            _PATH_SHORTENING_MESSAGES['shortening_applied'] = True
 
     common_flags = ["-iprefix", FRAMEWORK_SDK_DIR] + shortened_includes
     
@@ -645,14 +660,14 @@ if "arduino" in current_env_frameworks and "espidf" in current_env_frameworks:
     # Arduino as component is set, switch off Hybrid compile
     flag_custom_sdkconfig = False
 
-# Framework reinstallation if required - IMPROVED WITH SECURE DELETION
+# Framework reinstallation if required - Enhanced with secure deletion and error handling
 if check_reinstall_frwrk():
     # Secure removal of SDKConfig files
     safe_remove_sdkconfig_files()
     
     print("*** Reinstall Arduino framework ***")
     
-    # Secure framework cleanup
+    # Secure framework cleanup with enhanced error handling
     if safe_framework_cleanup():
         arduino_frmwrk_url = str(platform.get_package_spec("framework-arduinoespressif32")).split("uri=", 1)[1][:-1]
         arduino_frmwrk_lib_url = str(platform.get_package_spec("framework-arduinoespressif32-libs")).split("uri=",1)[1][:-1]
