@@ -681,7 +681,9 @@ if check_reinstall_frwrk():
         logging.error("Framework cleanup failed - installation aborted")
         sys.exit(1)
 
-if flag_custom_sdkconfig and not flag_any_custom_sdkconfig:
+if mcu == "esp32c2":
+    call_compile_libs()
+elif flag_custom_sdkconfig and not flag_any_custom_sdkconfig:
     call_compile_libs()
 
 # Main logic for Arduino Framework
