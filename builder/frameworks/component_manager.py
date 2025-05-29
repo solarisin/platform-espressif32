@@ -120,47 +120,27 @@ class ComponentManager:
         """Analyze project files to detect actually used components/libraries."""
         used_components = set()
         
-        print(f"DEBUG: Starting project analysis")
-        
         try:
+            # Analyze project source files
             src_dir = self.env.subst("$PROJECT_SRC_DIR")
-            print(f"DEBUG: Scanning source directory: {src_dir}")
-            
             if os.path.exists(src_dir):
-                file_count = 0
                 for root, dirs, files in os.walk(src_dir):
                     for file in files:
                         if file.endswith(('.cpp', '.c', '.h', '.hpp', '.ino')):
-                            file_count += 1
                             file_path = os.path.join(root, file)
-                            file_components = self._extract_components_from_file(file_path)
-                            if file_components:
-                                print(f"DEBUG: File {file} detected components: {file_components}")
-                            used_components.update(file_components)
-                
-                print(f"DEBUG: Scanned {file_count} source files")
+                            used_components.update(self._extract_components_from_file(file_path))
             
-            # Check lib_deps
+            # Analyze lib_deps for explicit dependencies (if present)
             lib_deps = self.env.GetProjectOption("lib_deps", [])
-            if lib_deps:
-                print(f"DEBUG: Found lib_deps: {lib_deps}")
-                if isinstance(lib_deps, str):
-                    lib_deps = [lib_deps]
+            if isinstance(lib_deps, str):
+                lib_deps = [lib_deps]
+            
+            for dep in lib_deps:
+                used_components.update(self._extract_components_from_lib_dep(str(dep)))
                 
-                for dep in lib_deps:
-                    dep_components = self._extract_components_from_lib_dep(str(dep))
-                    if dep_components:
-                        print(f"DEBUG: lib_dep '{dep}' mapped to components: {dep_components}")
-                    used_components.update(dep_components)
-            else:
-                print(f"DEBUG: No lib_deps found")
-                
-        except Exception as e:
-            print(f"DEBUG: Exception in project analysis: {e}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
+            pass
         
-        print(f"DEBUG: Final detected components: {used_components}")
         return used_components
     
     def _extract_components_from_file(self, file_path: str) -> Set[str]:
@@ -171,7 +151,7 @@ class ComponentManager:
         component_patterns = {
             'bt': ['bluetooth', 'ble', 'nimble', 'bt_', 'esp_bt', 'esp_ble'],
             'esp_wifi': ['wifi', 'esp_wifi', 'tcpip_adapter'],
-            'esp_dsp': ['dsps_', 'esp_dsp', 'fft2r'],
+            'esp_dsp': ['dsps_', 'esp_dsp', 'fft2r', 'dsps_fft2r'],  # Enhanced DSP detection
             'esp_http_client': ['esp_http_client', 'http_client'],
             'esp_https_ota': ['esp_https_ota', 'esp_ota'],
             'mdns': ['mdns', 'esp_mdns'],
@@ -433,15 +413,7 @@ class ComponentManager:
         build_py_path = join(self.arduino_libs_mcu, "pioarduino-build.py")
         
         if not os.path.exists(build_py_path):
-            print(f"DEBUG: Build file not found: {build_py_path}")
             return
-        
-        print(f"DEBUG: Starting lib_ignore processing")
-        print(f"DEBUG: ignored_libs = {list(self.ignored_libs)}")
-        
-        # Force project analysis and show results
-        self._project_components_cache = self._analyze_project_dependencies()
-        print(f"DEBUG: Detected project components: {list(self._project_components_cache)}")
         
         try:
             with open(build_py_path, 'r') as f:
@@ -450,19 +422,14 @@ class ComponentManager:
             original_content = content
             total_removed = 0
             
-            # Check each library individually
+            # Remove CPPPATH entries for each ignored library
             for lib_name in self.ignored_libs:
-                print(f"DEBUG: Processing lib_name = '{lib_name}'")
-                
-                # Check if component is used
-                is_used = self._is_component_used_in_project(lib_name)
-                print(f"DEBUG: Is '{lib_name}' used in project? {is_used}")
-                
-                if is_used:
-                    print(f"DEBUG: SKIPPING '{lib_name}' - detected as used")
+                # Universal protection: Skip if component is actually used in project
+                if self._is_component_used_in_project(lib_name):
+                    print(f"Skipping removal of library '{lib_name}' - detected as used in project")
                     continue
-                
-                # Check what would be removed
+                    
+                # Multiple patterns to catch different include formats
                 patterns = [
                     rf'.*join\([^,]*,\s*"include",\s*"{re.escape(lib_name)}"[^)]*\),?\n',
                     rf'.*"include/{re.escape(lib_name)}"[^,\n]*,?\n',
@@ -474,24 +441,11 @@ class ComponentManager:
                     rf'\s*"[^"]*/{re.escape(lib_name)}/[^"]*",?\n'
                 ]
                 
-                matches_found = []
                 for pattern in patterns:
                     matches = re.findall(pattern, content)
                     if matches:
-                        matches_found.extend(matches)
-                
-                if matches_found:
-                    print(f"DEBUG: REMOVING '{lib_name}' - found {len(matches_found)} matches:")
-                    for match in matches_found:
-                        print(f"DEBUG:   - {match.strip()}")
-                    
-                    for pattern in patterns:
                         content = re.sub(pattern, '', content)
-                        total_removed += len(re.findall(pattern, original_content))
-                else:
-                    print(f"DEBUG: No matches found for '{lib_name}'")
-            
-            print(f"DEBUG: Total lines removed: {total_removed}")
+                        total_removed += len(matches)
             
             # Clean up empty lines and trailing commas
             content = re.sub(r'\n\s*\n', '\n', content)
@@ -499,16 +453,11 @@ class ComponentManager:
             
             # Validate and write changes
             if self._validate_changes(original_content, content) and content != original_content:
-                print(f"DEBUG: Content changed, writing new file")
                 with open(build_py_path, 'w') as f:
                     f.write(content)
-            else:
-                print(f"DEBUG: No changes made to build file")
                 
-        except Exception as e:
-            print(f"DEBUG: Exception occurred: {e}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
+            pass
     
     def _validate_changes(self, original_content: str, new_content: str) -> bool:
         """Validate that the changes are reasonable."""
