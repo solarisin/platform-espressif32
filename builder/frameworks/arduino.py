@@ -682,7 +682,7 @@ if check_reinstall_frwrk():
         sys.exit(1)
 
 if mcu == "esp32c2":
-    call_compile_libs()
+    flag_custom_sdkconfig = True
 elif flag_custom_sdkconfig and not flag_any_custom_sdkconfig:
     call_compile_libs()
 
