@@ -297,12 +297,63 @@ class ComponentManager:
         
         return cleaned_name
     
+    def _has_bt_ble_dependencies(self) -> bool:
+        """Check if lib_deps contains any BT/BLE related dependencies."""
+        try:
+            # Get lib_deps from current environment
+            lib_deps = self.env.GetProjectOption("lib_deps", [])
+            
+            if isinstance(lib_deps, str):
+                lib_deps = [lib_deps]
+            elif lib_deps is None:
+                lib_deps = []
+            
+            # Convert to string and check for BT/BLE keywords
+            lib_deps_str = ' '.join(str(dep) for dep in lib_deps).upper()
+            
+            bt_ble_keywords = ['BLE', 'BT', 'NIMBLE', 'BLUETOOTH']
+            
+            for keyword in bt_ble_keywords:
+                if keyword in lib_deps_str:
+                    return True
+            
+            return False
+            
+        except Exception:
+            return False
+    
+    def _is_bt_related_library(self, lib_name: str) -> bool:
+        """Check if a library name is related to Bluetooth/BLE functionality."""
+        lib_name_upper = lib_name.upper()
+        
+        bt_related_names = [
+            'BT',
+            'BLE', 
+            'BLUETOOTH',
+            'NIMBLE',
+            'ESP32_BLE',
+            'ESP32BLE',
+            'BLUETOOTHSERIAL',
+            'BLE_ARDUINO',
+            'ESP_BLE',
+            'ESP_BT'
+        ]
+        
+        for bt_name in bt_related_names:
+            if bt_name in lib_name_upper:
+                return True
+        
+        return False
+    
     def _remove_ignored_lib_includes(self) -> None:
         """Remove include entries for ignored libraries from pioarduino-build.py."""
         build_py_path = join(self.arduino_libs_mcu, "pioarduino-build.py")
         
         if not os.path.exists(build_py_path):
             return
+        
+        # Check if BT/BLE dependencies exist in lib_deps
+        bt_ble_protected = self._has_bt_ble_dependencies()
         
         try:
             with open(build_py_path, 'r') as f:
@@ -313,6 +364,11 @@ class ComponentManager:
             
             # Remove CPPPATH entries for each ignored library
             for lib_name in self.ignored_libs:
+                # Skip BT-related libraries if BT/BLE dependencies are present
+                if bt_ble_protected and self._is_bt_related_library(lib_name):
+                    print(f"Skipping removal of BT-related library '{lib_name}' due to BT/BLE dependency in lib_deps")
+                    continue
+                    
                 # Multiple patterns to catch different include formats
                 patterns = [
                     rf'.*join\([^,]*,\s*"include",\s*"{re.escape(lib_name)}"[^)]*\),?\n',
