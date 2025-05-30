@@ -30,10 +30,6 @@ class ComponentManager:
         # Simple logging attributes
         self.component_changes: List[str] = []
         
-        # MCU-specific backup tracking
-        self.backup_created_per_mcu = {}  # Track backups per MCU
-        self.yaml_backup_created = False
-        
         self.arduino_framework_dir = self.platform.get_package_dir("framework-arduinoespressif32")
         self.arduino_libs_mcu = join(self.platform.get_package_dir("framework-arduinoespressif32-libs"), self.mcu)
     
@@ -56,16 +52,15 @@ class ComponentManager:
             remove_components: Whether to process component removals
         """
 
-        # Create MCU-specific backup before first component removal and on every add of a component
-        if remove_components and not self.backup_created_per_mcu.get(self.mcu, False) or add_components:
-            if self._backup_pioarduino_build_py():
-                self._log_change(f"Created MCU backup for {self.mcu}")
+        # Create backup before first component removal and alwyas when a component is added
+        if remove_components and not self.removed_components or add_components:
+            self._backup_pioarduino_build_py()
+            self._log_change("Created backup of build file")
     
         # Check if env and GetProjectOption are available
         if hasattr(self, 'env') and hasattr(self.env, 'GetProjectOption'):
             component_yml_path = self._get_or_create_component_yml()
             component_data = self._load_component_yml(component_yml_path)
-            original_data = component_data.copy()
     
             if remove_components:
                 try:
@@ -85,9 +80,7 @@ class ComponentManager:
                 except Exception as e:
                     self._log_change(f"Error adding components: {str(e)}")
 
-            # Only save if changes were made
-            if component_data != original_data:
-                self._save_component_yml(component_yml_path, component_data)
+            self._save_component_yml(component_yml_path, component_data)
         
             # Clean up removed components
             if self.removed_components:
@@ -101,6 +94,10 @@ class ComponentManager:
     
     def handle_lib_ignore(self) -> None:
         """Handle lib_ignore entries from platformio.ini and remove corresponding includes."""
+        # Create backup before processing lib_ignore
+        if not self.ignored_libs:
+            self._backup_pioarduino_build_py()
+        
         # Get lib_ignore entries from current environment only
         lib_ignore_entries = self._get_lib_ignore_entries()
         
@@ -518,10 +515,6 @@ class ComponentManager:
             
             # Validate and write changes
             if self._validate_changes(original_content, content) and content != original_content:
-                # Ensure MCU-specific backup exists before modification
-                if not self.backup_created_per_mcu.get(self.mcu, False):
-                    self._backup_pioarduino_build_py()
-                
                 with open(build_py_path, 'w') as f:
                     f.write(content)
                 self._log_change(f"Successfully updated build file with {total_removed} total removals")
@@ -557,28 +550,12 @@ class ComponentManager:
         self._log_change(f"Created new component.yml file at {project_yml}")
         return project_yml
     
-    def _create_backup(self, file_path: str) -> bool:
-        """
-        Create single backup of a file if it doesn't exist.
-        
-        Args:
-            file_path: Path to file to backup
-            
-        Returns:
-            True if backup was created or already exists
-        """
+    def _create_backup(self, file_path: str) -> None:
+        """Create backup of a file."""
         backup_path = f"{file_path}.orig"
-        
-        if os.path.exists(file_path) and not os.path.exists(backup_path):
-            try:
-                shutil.copy2(file_path, backup_path)
-                self._log_change(f"Single backup created: {backup_path}")
-                return True
-            except Exception as e:
-                self._log_change(f"Backup failed: {str(e)}")
-                return False
-        
-        return os.path.exists(backup_path)
+        if not os.path.exists(backup_path):
+            shutil.copy(file_path, backup_path)
+            self._log_change(f"Created backup: {backup_path}")
     
     def _create_default_component_yml(self, file_path: str) -> None:
         """Create a default idf_component.yml file."""
@@ -600,37 +577,13 @@ class ComponentManager:
             return {"dependencies": {}}
     
     def _save_component_yml(self, file_path: str, data: Dict[str, Any]) -> None:
-        """
-        Save component data to YAML file only if changed.
-        
-        Args:
-            file_path: Path to YAML file
-            data: Data to save
-        """
+        """Save component data to YAML file."""
         try:
-            # Check if content would actually change
-            if os.path.exists(file_path):
-                with open(file_path, "r") as f:
-                    existing_data = yaml.load(f, Loader=SafeLoader) or {}
-                
-                # Compare data structures
-                if existing_data == data:
-                    self._log_change(f"YAML unchanged, skipping write: {file_path}")
-                    return
-            
-            # Create backup before first modification (only once)
-            if not self.yaml_backup_created:
-                self._create_backup(file_path)
-                self.yaml_backup_created = True
-            
-            # Write only if changed
             with open(file_path, "w") as f:
-                yaml.dump(data, f, default_flow_style=False, sort_keys=True)
-            
-            self._log_change(f"YAML updated: {file_path}")
-            
+                yaml.dump(data, f)
+            self._log_change(f"Saved component configuration to {file_path}")
         except Exception as e:
-            self._log_change(f"Error saving YAML: {str(e)}")
+            self._log_change(f"Error saving component configuration: {str(e)}")
     
     def _remove_components(self, component_data: Dict[str, Any], components_to_remove: list) -> None:
         """Remove specified components from the configuration."""
@@ -675,34 +628,17 @@ class ComponentManager:
         """Convert component name from registry format to filesystem format."""
         return component_name.replace("/", "__")
     
-    def _backup_pioarduino_build_py(self) -> bool:
-        """Create MCU-specific backup of pioarduino-build.py only once per MCU."""
+    def _backup_pioarduino_build_py(self) -> None:
+        """Create backup of the original pioarduino-build.py."""
         if "arduino" not in self.env.subst("$PIOFRAMEWORK"):
-            return False
-        
-        # Check if backup already created for this MCU in this session
-        if self.backup_created_per_mcu.get(self.mcu, False):
-            return True
+            return
         
         build_py_path = join(self.arduino_libs_mcu, "pioarduino-build.py")
         backup_path = join(self.arduino_libs_mcu, f"pioarduino-build.py.{self.mcu}")
         
-        # Only create backup if source exists and MCU-specific backup doesn't exist
         if os.path.exists(build_py_path) and not os.path.exists(backup_path):
-            try:
-                shutil.copy2(build_py_path, backup_path)
-                self.backup_created_per_mcu[self.mcu] = True
-                self._log_change(f"Created MCU-specific backup for {self.mcu}: {backup_path}")
-                return True
-            except Exception as e:
-                self._log_change(f"MCU backup creation failed for {self.mcu}: {str(e)}")
-                return False
-        elif os.path.exists(backup_path):
-            self.backup_created_per_mcu[self.mcu] = True
-            self._log_change(f"MCU backup already exists for {self.mcu}")
-            return True
-        
-        return False
+            shutil.copy2(build_py_path, backup_path)
+            self._log_change(f"Created backup of pioarduino-build.py for {self.mcu}")
     
     def _cleanup_removed_components(self) -> None:
         """Clean up removed components and restore original build file."""
@@ -752,59 +688,11 @@ class ComponentManager:
             self._log_change(f"Error cleaning up CPPPATH entries: {str(e)}")
     
     def restore_pioarduino_build_py(self, source=None, target=None, env=None) -> None:
-        """
-        Restore the MCU-specific pioarduino-build.py from backup.
-        
-        Args:
-            source: Build source (unused)
-            target: Build target (unused) 
-            env: Environment (unused)
-        """
+        """Restore the original pioarduino-build.py from backup."""
         build_py_path = join(self.arduino_libs_mcu, "pioarduino-build.py")
         backup_path = join(self.arduino_libs_mcu, f"pioarduino-build.py.{self.mcu}")
         
         if os.path.exists(backup_path):
-            try:
-                shutil.copy2(backup_path, build_py_path)
-                self._log_change(f"Restored MCU-specific build file for {self.mcu}")
-                
-            except Exception as e:
-                self._log_change(f"Failed to restore MCU backup for {self.mcu}: {str(e)}")
-        else:
-            self._log_change(f"No MCU backup found for {self.mcu}")
-    
-    def get_mcu_backup_status(self) -> Dict[str, bool]:
-        """
-        Get status of MCU-specific backups.
-        
-        Returns:
-            Dictionary with MCU types as keys and backup existence as values
-        """
-        backup_dir = self.arduino_libs_mcu
-        mcu_types = ["esp32", "esp32s2", "esp32s3", "esp32c3", "esp32c6", "esp32h2"]
-        
-        status = {}
-        for mcu in mcu_types:
-            backup_path = join(backup_dir, f"pioarduino-build.py.{mcu}")
-            status[mcu] = os.path.exists(backup_path)
-        
-        return status
-    
-    def get_changes_summary(self) -> List[str]:
-        """
-        Get simple list of all changes made.
-        
-        Returns:
-            List of change messages
-        """
-        return self.component_changes.copy()
-
-    def print_changes_summary(self) -> None:
-        """Print a simple summary of all changes."""
-        if self.component_changes:
-            print("\n=== Component Manager Changes ===")
-            for change in self.component_changes:
-                print(f"  {change}")
-            print("=" * 35)
-        else:
-            print("[ComponentManager] No changes made")
+            shutil.copy2(backup_path, build_py_path)
+            os.remove(backup_path)
+            self._log_change("Restored original pioarduino-build.py from backup")
