@@ -9,9 +9,15 @@ from typing import Set, Optional, Dict, Any, List
 
 
 class ComponentManager:
-    """Manages IDF components for ESP32 Arduino framework builds."""
+    """Manages IDF components for ESP32 Arduino framework builds with logging support."""
     
     def __init__(self, env):
+        """
+        Initialize the ComponentManager.
+        
+        Args:
+            env: PlatformIO environment object
+        """
         self.env = env
         self.platform = env.PioPlatform()
         self.config = env.GetProjectConfig()
@@ -21,15 +27,35 @@ class ComponentManager:
         self.removed_components: Set[str] = set()
         self.ignored_libs: Set[str] = set()
         
+        # Simple logging attributes
+        self.component_changes: List[str] = []
+        
         self.arduino_framework_dir = self.platform.get_package_dir("framework-arduinoespressif32")
         self.arduino_libs_mcu = join(self.platform.get_package_dir("framework-arduinoespressif32-libs"), self.mcu)
+    
+    def _log_change(self, message: str) -> None:
+        """
+        Simple logging without timestamp.
+        
+        Args:
+            message: Log message to record
+        """
+        self.component_changes.append(message)
+        print(f"[ComponentManager] {message}")
 
     def handle_component_settings(self, add_components: bool = False, remove_components: bool = False) -> None:
-        """Handle adding and removing IDF components based on project configuration."""
+        """
+        Handle adding and removing IDF components based on project configuration.
+        
+        Args:
+            add_components: Whether to process component additions
+            remove_components: Whether to process component removals
+        """
 
         # Create backup before first component removal
         if remove_components and not self.removed_components or add_components and not self.add_components:
             self._backup_pioarduino_build_py()
+            self._log_change("Created backup of build file")
     
         # Check if env and GetProjectOption are available
         if hasattr(self, 'env') or hasattr(self.env, 'GetProjectOption'):
@@ -43,9 +69,7 @@ class ComponentManager:
                         components_to_remove = remove_option.splitlines()
                         self._remove_components(component_data, components_to_remove)
                 except Exception as e:
-                    # Optional: Logging for debugging
-                    # print(f"Error removing components: {e}")
-                    pass
+                    self._log_change(f"Error removing components: {str(e)}")
     
             if add_components:
                 try:
@@ -54,9 +78,7 @@ class ComponentManager:
                         components_to_add = add_option.splitlines()
                         self._add_components(component_data, components_to_add)
                 except Exception as e:
-                    # Optional: Logging for debugging
-                    # print(f"Error adding components: {e}")
-                    pass
+                    self._log_change(f"Error adding components: {str(e)}")
 
             self._save_component_yml(component_yml_path, component_data)
         
@@ -65,6 +87,10 @@ class ComponentManager:
                 self._cleanup_removed_components()
 
         self.handle_lib_ignore()
+        
+        # Print summary
+        if self.component_changes:
+            self._log_change(f"Session completed with {len(self.component_changes)} changes")
     
     def handle_lib_ignore(self) -> None:
         """Handle lib_ignore entries from platformio.ini and remove corresponding includes."""
@@ -78,10 +104,15 @@ class ComponentManager:
         if lib_ignore_entries:
             self.ignored_libs.update(lib_ignore_entries)
             self._remove_ignored_lib_includes()
-            print(f"Removed include paths for {len(lib_ignore_entries)} ignored libraries")
+            self._log_change(f"Processed {len(lib_ignore_entries)} ignored libraries")
     
     def _get_lib_ignore_entries(self) -> List[str]:
-        """Get lib_ignore entries from current environment configuration only."""
+        """
+        Get lib_ignore entries from current environment configuration only.
+        
+        Returns:
+            List of library names to ignore
+        """
         try:
             # Get lib_ignore from current environment only
             lib_ignore = self.env.GetProjectOption("lib_ignore", [])
@@ -236,7 +267,12 @@ class ComponentManager:
         return False
     
     def _get_arduino_core_libraries(self) -> Dict[str, str]:
-        """Get all Arduino core libraries and their corresponding include paths."""
+        """
+        Get all Arduino core libraries and their corresponding include paths.
+        
+        Returns:
+            Dictionary mapping library names to include paths
+        """
         libraries_mapping = {}
         
         # Path to Arduino Core Libraries
@@ -260,7 +296,15 @@ class ComponentManager:
         return libraries_mapping
     
     def _get_library_name_from_properties(self, lib_dir: str) -> Optional[str]:
-        """Extract library name from library.properties file."""
+        """
+        Extract library name from library.properties file.
+        
+        Args:
+            lib_dir: Library directory path
+            
+        Returns:
+            Library name or None if not found
+        """
         prop_path = join(lib_dir, "library.properties")
         if not os.path.isfile(prop_path):
             return None
@@ -277,7 +321,16 @@ class ComponentManager:
         return None
     
     def _map_library_to_include_path(self, lib_name: str, dir_name: str) -> str:
-        """Map library name to corresponding include path."""
+        """
+        Map library name to corresponding include path.
+        
+        Args:
+            lib_name: Library name
+            dir_name: Directory name
+            
+        Returns:
+            Mapped include path
+        """
         lib_name_lower = lib_name.lower().replace(' ', '').replace('-', '_')
         dir_name_lower = dir_name.lower()
         
@@ -434,7 +487,7 @@ class ComponentManager:
             for lib_name in self.ignored_libs:
                 # Universal protection: Skip if component is actually used in project
                 if self._is_component_used_in_project(lib_name):
-                    print(f"Skipping removal of library '{lib_name}' - detected as used in project")
+                    self._log_change(f"Skipping removal of library '{lib_name}' - detected as used in project")
                     continue
                     
                 # Multiple patterns to catch different include formats
@@ -454,6 +507,7 @@ class ComponentManager:
                     if matches:
                         content = re.sub(pattern, '', content)
                         total_removed += len(matches)
+                        self._log_change(f"Removed {len(matches)} include entries for library '{lib_name}'")
             
             # Clean up empty lines and trailing commas
             content = re.sub(r'\n\s*\n', '\n', content)
@@ -463,9 +517,10 @@ class ComponentManager:
             if self._validate_changes(original_content, content) and content != original_content:
                 with open(build_py_path, 'w') as f:
                     f.write(content)
+                self._log_change(f"Successfully updated build file with {total_removed} total removals")
                 
-        except Exception:
-            pass
+        except Exception as e:
+            self._log_change(f"Error processing ignored library includes: {str(e)}")
     
     def _validate_changes(self, original_content: str, new_content: str) -> bool:
         """Validate that the changes are reasonable."""
@@ -492,6 +547,7 @@ class ComponentManager:
         
         # Create new file in project source
         self._create_default_component_yml(project_yml)
+        self._log_change(f"Created new component.yml file at {project_yml}")
         return project_yml
     
     def _create_backup(self, file_path: str) -> None:
@@ -499,6 +555,7 @@ class ComponentManager:
         backup_path = f"{file_path}.orig"
         if not os.path.exists(backup_path):
             shutil.copy(file_path, backup_path)
+            self._log_change(f"Created backup: {backup_path}")
     
     def _create_default_component_yml(self, file_path: str) -> None:
         """Create a default idf_component.yml file."""
@@ -524,8 +581,9 @@ class ComponentManager:
         try:
             with open(file_path, "w") as f:
                 yaml.dump(data, f)
-        except Exception:
-            pass
+            self._log_change(f"Saved component configuration to {file_path}")
+        except Exception as e:
+            self._log_change(f"Error saving component configuration: {str(e)}")
     
     def _remove_components(self, component_data: Dict[str, Any], components_to_remove: list) -> None:
         """Remove specified components from the configuration."""
@@ -538,6 +596,7 @@ class ComponentManager:
                 
             if component in dependencies:
                 del dependencies[component]
+                self._log_change(f"Removed component: {component}")
                 
                 # Track for cleanup
                 filesystem_name = self._convert_component_name_to_filesystem(component)
@@ -556,6 +615,7 @@ class ComponentManager:
             
             if component_name not in dependencies:
                 dependencies[component_name] = {"version": version}
+                self._log_change(f"Added component: {component_name} (version: {version})")
     
     def _parse_component_entry(self, entry: str) -> tuple[str, str]:
         """Parse component entry into name and version."""
@@ -578,6 +638,7 @@ class ComponentManager:
         
         if os.path.exists(build_py_path) and not os.path.exists(backup_path):
             shutil.copy2(build_py_path, backup_path)
+            self._log_change(f"Created backup of pioarduino-build.py for {self.mcu}")
     
     def _cleanup_removed_components(self) -> None:
         """Clean up removed components and restore original build file."""
@@ -592,6 +653,7 @@ class ComponentManager:
         
         if os.path.exists(include_path):
             shutil.rmtree(include_path)
+            self._log_change(f"Removed include directory: {include_path}")
     
     def _remove_cpppath_entries(self) -> None:
         """Remove CPPPATH entries for removed components from pioarduino-build.py."""
@@ -620,9 +682,10 @@ class ComponentManager:
             if content != original_content:
                 with open(build_py_path, 'w') as f:
                     f.write(content)
+                self._log_change(f"Cleaned up CPPPATH entries for removed components")
                 
-        except Exception:
-            pass
+        except Exception as e:
+            self._log_change(f"Error cleaning up CPPPATH entries: {str(e)}")
     
     def restore_pioarduino_build_py(self, source=None, target=None, env=None) -> None:
         """Restore the original pioarduino-build.py from backup."""
@@ -632,3 +695,4 @@ class ComponentManager:
         if os.path.exists(backup_path):
             shutil.copy2(backup_path, build_py_path)
             os.remove(backup_path)
+            self._log_change("Restored original pioarduino-build.py from backup")
