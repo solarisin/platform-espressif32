@@ -1,4 +1,23 @@
 # component_manager.py
+"""
+ESP32 Arduino Framework Component Manager
+
+This module provides a comprehensive system for managing IDF components in ESP32 Arduino
+framework builds. It handles component addition/removal, library mapping, project analysis,
+and build file management with extensive logging support.
+
+Classes:
+    ComponentLogger: Handles logging functionality for component operations
+    ComponentYamlHandler: Manages YAML file operations for component configuration
+    ProjectAnalyzer: Analyzes project dependencies and component usage
+    LibraryMapper: Maps library names to include paths
+    BuildFileManager: Manages backup and restoration of build files
+    ComponentManager: Main manager class that coordinates all component operations
+
+Author: Jason2866 ESP32 pioarduino Framework maintainer
+License: Apache 2.0
+"""
+
 import os
 import shutil
 import re
@@ -9,33 +28,138 @@ from typing import Set, Optional, Dict, Any, List
 
 
 class ComponentLogger:
-    """Handles logging functionality for component operations."""
+    """
+    Handles logging functionality for component operations.
+    
+    This class provides a centralized logging mechanism for tracking all component
+    management operations, including changes, errors, and status updates.
+    
+    Attributes:
+        component_changes (List[str]): List of all logged change messages
+        
+    Example:
+        >>> logger = ComponentLogger()
+        >>> logger.log_change("Component added successfully")
+        >>> print(logger.get_change_count())
+        1
+    """
     
     def __init__(self):
+        """
+        Initialize the logger with an empty change list.
+        
+        Creates a new ComponentLogger instance with an empty list to track
+        all component-related changes during the session.
+        """
         self.component_changes: List[str] = []
     
     def log_change(self, message: str) -> None:
-        """Log a component change with simple console output."""
+        """
+        Log a component change with simple console output.
+        
+        Records a change message both in the internal list and outputs it
+        to the console with a standardized format.
+        
+        Args:
+            message (str): The message to log describing the change
+            
+        Example:
+            >>> logger = ComponentLogger()
+            >>> logger.log_change("Added WiFi component")
+            [ComponentManager] Added WiFi component
+        """
         self.component_changes.append(message)
         print(f"[ComponentManager] {message}")
     
     def get_changes(self) -> List[str]:
-        """Get all logged changes."""
+        """
+        Get all logged changes.
+        
+        Returns a copy of all change messages that have been logged during
+        the current session.
+        
+        Returns:
+            List[str]: List of all logged change messages
+            
+        Example:
+            >>> logger = ComponentLogger()
+            >>> logger.log_change("First change")
+            >>> logger.log_change("Second change")
+            >>> changes = logger.get_changes()
+            >>> len(changes)
+            2
+        """
         return self.component_changes
     
     def get_change_count(self) -> int:
-        """Get the number of changes logged."""
+        """
+        Get the number of changes logged.
+        
+        Returns the total count of changes that have been logged during
+        the current session.
+        
+        Returns:
+            int: Number of logged changes
+            
+        Example:
+            >>> logger = ComponentLogger()
+            >>> logger.log_change("Change 1")
+            >>> logger.get_change_count()
+            1
+        """
         return len(self.component_changes)
 
 
 class ComponentYamlHandler:
-    """Handles YAML file operations for component configuration."""
+    """
+    Handles YAML file operations for component configuration.
+    
+    This class manages all operations related to the idf_component.yml file,
+    including creation, loading, saving, and backup operations. It provides
+    a clean interface for component configuration management.
+    
+    Attributes:
+        logger (ComponentLogger): Logger instance for recording operations
+        
+    Example:
+        >>> logger = ComponentLogger()
+        >>> handler = ComponentYamlHandler(logger)
+        >>> data = handler.load_component_yml("path/to/component.yml")
+    """
     
     def __init__(self, logger: ComponentLogger):
+        """
+        Initialize the YAML handler.
+        
+        Creates a new ComponentYamlHandler with a reference to a logger
+        for recording all YAML-related operations.
+        
+        Args:
+            logger (ComponentLogger): Logger instance for recording operations
+        """
         self.logger = logger
     
     def get_or_create_component_yml(self, arduino_framework_dir: str, project_src_dir: str) -> str:
-        """Get path to idf_component.yml, creating it if necessary."""
+        """
+        Get path to idf_component.yml, creating it if necessary.
+        
+        Searches for an existing idf_component.yml file in the Arduino framework
+        directory first, then in the project source directory. If neither exists,
+        creates a new default file in the project source directory.
+        
+        Args:
+            arduino_framework_dir (str): Path to Arduino framework directory
+            project_src_dir (str): Path to project source directory
+            
+        Returns:
+            str: Path to the component YAML file
+            
+        Example:
+            >>> handler = ComponentYamlHandler(logger)
+            >>> yml_path = handler.get_or_create_component_yml("/framework", "/project/src")
+            >>> os.path.exists(yml_path)
+            True
+        """
         # Try Arduino framework first
         framework_yml = join(arduino_framework_dir, "idf_component.yml")
         if os.path.exists(framework_yml):
@@ -54,7 +178,25 @@ class ComponentYamlHandler:
         return project_yml
     
     def load_component_yml(self, file_path: str) -> Dict[str, Any]:
-        """Load and parse idf_component.yml file."""
+        """
+        Load and parse idf_component.yml file.
+        
+        Attempts to load and parse a YAML file containing component configuration.
+        If the file doesn't exist or cannot be parsed, returns a default structure
+        with an empty dependencies section.
+        
+        Args:
+            file_path (str): Path to the YAML file to load
+            
+        Returns:
+            Dict[str, Any]: Parsed YAML data as dictionary with at least a 'dependencies' key
+            
+        Example:
+            >>> handler = ComponentYamlHandler(logger)
+            >>> data = handler.load_component_yml("component.yml")
+            >>> 'dependencies' in data
+            True
+        """
         try:
             with open(file_path, "r") as f:
                 return yaml.load(f, Loader=SafeLoader) or {"dependencies": {}}
@@ -62,7 +204,21 @@ class ComponentYamlHandler:
             return {"dependencies": {}}
     
     def save_component_yml(self, file_path: str, data: Dict[str, Any]) -> None:
-        """Save component data to YAML file."""
+        """
+        Save component data to YAML file.
+        
+        Writes component configuration data to a YAML file with proper formatting.
+        Logs the operation result, including any errors that occur during saving.
+        
+        Args:
+            file_path (str): Path where to save the YAML file
+            data (Dict[str, Any]): Component data to save
+            
+        Example:
+            >>> handler = ComponentYamlHandler(logger)
+            >>> data = {"dependencies": {"esp_wifi": {"version": "*"}}}
+            >>> handler.save_component_yml("component.yml", data)
+        """
         try:
             with open(file_path, "w") as f:
                 yaml.dump(data, f)
@@ -71,14 +227,38 @@ class ComponentYamlHandler:
             self.logger.log_change(f"Error saving component configuration: {str(e)}")
     
     def _create_backup(self, file_path: str) -> None:
-        """Create backup of a file."""
+        """
+        Create backup of a file.
+        
+        Creates a backup copy of the specified file by appending '.orig' to the filename.
+        Only creates the backup if it doesn't already exist to preserve the original.
+        
+        Args:
+            file_path (str): Path to the file to backup
+            
+        Example:
+            >>> handler._create_backup("component.yml")
+            # Creates component.yml.orig if it doesn't exist
+        """
         backup_path = f"{file_path}.orig"
         if not os.path.exists(backup_path):
             shutil.copy(file_path, backup_path)
             self.logger.log_change(f"Created backup: {backup_path}")
     
     def _create_default_component_yml(self, file_path: str) -> None:
-        """Create a default idf_component.yml file."""
+        """
+        Create a default idf_component.yml file.
+        
+        Creates a new component YAML file with minimal default configuration
+        that includes only the IDF version requirement.
+        
+        Args:
+            file_path (str): Path where to create the default file
+            
+        Example:
+            >>> handler._create_default_component_yml("new_component.yml")
+            # Creates file with default IDF dependency
+        """
         default_content = {
             "dependencies": {
                 "idf": ">=5.1"
@@ -90,14 +270,56 @@ class ComponentYamlHandler:
 
 
 class ProjectAnalyzer:
-    """Analyzes project dependencies and component usage."""
+    """
+    Analyzes project dependencies and component usage.
+    
+    This class provides functionality to analyze project source files and
+    configuration to determine which ESP-IDF components are actually being
+    used. This helps prevent removal of critical components and optimizes
+    the build process.
+    
+    Attributes:
+        env: PlatformIO environment object
+        _project_components_cache (Optional[Set[str]]): Cached analysis results
+        
+    Example:
+        >>> analyzer = ProjectAnalyzer(env)
+        >>> used_components = analyzer.analyze_project_dependencies()
+        >>> analyzer.is_component_used_in_project("esp_wifi")
+        True
+    """
     
     def __init__(self, env):
+        """
+        Initialize the project analyzer.
+        
+        Creates a new ProjectAnalyzer with a reference to the PlatformIO
+        environment for accessing project configuration and files.
+        
+        Args:
+            env: PlatformIO environment object containing project information
+        """
         self.env = env
         self._project_components_cache = None
     
     def analyze_project_dependencies(self) -> Set[str]:
-        """Analyze project files to detect actually used components/libraries."""
+        """
+        Analyze project files to detect actually used components/libraries.
+        
+        Performs a comprehensive analysis of project source files and library
+        dependencies to identify which ESP-IDF components are actually being
+        used in the project. This includes parsing source code for includes
+        and function calls, as well as analyzing lib_deps entries.
+        
+        Returns:
+            Set[str]: Set of component names that are used in the project
+            
+        Example:
+            >>> analyzer = ProjectAnalyzer(env)
+            >>> components = analyzer.analyze_project_dependencies()
+            >>> "esp_wifi" in components  # If project uses WiFi
+            True
+        """
         used_components = set()
         
         try:
@@ -124,7 +346,24 @@ class ProjectAnalyzer:
         return used_components
     
     def is_component_used_in_project(self, lib_name: str) -> bool:
-        """Check if a component/library is actually used in the project."""
+        """
+        Check if a component/library is actually used in the project.
+        
+        Determines whether a specific component or library is being used in the
+        project by checking against the cached analysis results. Uses both direct
+        matching and partial matching for related components.
+        
+        Args:
+            lib_name (str): Name of the library/component to check
+            
+        Returns:
+            bool: True if the component is used in the project, False otherwise
+            
+        Example:
+            >>> analyzer = ProjectAnalyzer(env)
+            >>> analyzer.is_component_used_in_project("esp_wifi")
+            True  # If WiFi functionality is detected in project
+        """
         # Cache project analysis for performance
         if self._project_components_cache is None:
             self._project_components_cache = self.analyze_project_dependencies()
@@ -143,14 +382,32 @@ class ProjectAnalyzer:
         return False
     
     def _extract_components_from_file(self, file_path: str) -> Set[str]:
-        """Extract component usage from a single file by analyzing includes and function calls."""
+        """
+        Extract component usage from a single file by analyzing includes and function calls.
+        
+        Analyzes a source file to detect which ESP-IDF components are being used
+        by looking for specific patterns in the code such as include statements,
+        function calls, and API usage patterns.
+        
+        Args:
+            file_path (str): Path to the source file to analyze
+            
+        Returns:
+            Set[str]: Set of component names found in the file
+            
+        Example:
+            >>> analyzer = ProjectAnalyzer(env)
+            >>> components = analyzer._extract_components_from_file("main.cpp")
+            >>> "esp_wifi" in components  # If file contains WiFi code
+            True
+        """
         components = set()
         
         # Component detection patterns - maps component names to code patterns
         component_patterns = {
             'bt': ['bluetooth', 'ble', 'nimble', 'bt_', 'esp_bt', 'esp_ble'],
             'esp_wifi': ['wifi', 'esp_wifi', 'tcpip_adapter'],
-            'esp_dsp': ['dsps_', 'esp_dsp', 'fft2r', 'dsps_fft2r'],
+            'esp_dsp': ['dsps_', 'esp_dsp', 'fft2r', 'dsps_fft2r'],  # Enhanced DSP detection
             'esp_http_client': ['esp_http_client', 'http_client'],
             'esp_https_ota': ['esp_https_ota', 'esp_ota'],
             'mdns': ['mdns', 'esp_mdns'],
@@ -184,7 +441,24 @@ class ProjectAnalyzer:
         return components
     
     def _extract_components_from_lib_dep(self, lib_dep: str) -> Set[str]:
-        """Extract components from lib_deps entry by mapping library names to ESP-IDF components."""
+        """
+        Extract components from lib_deps entry by mapping library names to ESP-IDF components.
+        
+        Analyzes a library dependency string from platformio.ini and maps it to
+        corresponding ESP-IDF components that would be required to support that library.
+        
+        Args:
+            lib_dep (str): Library dependency string from platformio.ini
+            
+        Returns:
+            Set[str]: Set of ESP-IDF component names that correspond to the library
+            
+        Example:
+            >>> analyzer = ProjectAnalyzer(env)
+            >>> components = analyzer._extract_components_from_lib_dep("WiFi")
+            >>> "esp_wifi" in components
+            True
+        """
         components = set()
         lib_dep_upper = lib_dep.upper()
         
@@ -209,14 +483,60 @@ class ProjectAnalyzer:
 
 
 class LibraryMapper:
-    """Handles mapping between library names and include paths."""
+    """
+    Handles mapping between library names and include paths.
+    
+    This class provides functionality to map Arduino library names to their
+    corresponding ESP-IDF component include paths. It maintains a comprehensive
+    mapping database and can analyze Arduino library properties to determine
+    the correct include paths.
+    
+    Attributes:
+        arduino_framework_dir (str): Path to Arduino framework directory
+        _arduino_libraries_cache (Optional[Dict[str, str]]): Cached library mappings
+        
+    Example:
+        >>> mapper = LibraryMapper("/path/to/arduino/framework")
+        >>> include_path = mapper.convert_lib_name_to_include("WiFi")
+        >>> include_path
+        "esp_wifi"
+    """
     
     def __init__(self, arduino_framework_dir: str):
+        """
+        Initialize the library mapper.
+        
+        Creates a new LibraryMapper with the path to the Arduino framework
+        directory for analyzing available libraries and their properties.
+        
+        Args:
+            arduino_framework_dir (str): Path to Arduino framework directory
+        """
         self.arduino_framework_dir = arduino_framework_dir
         self._arduino_libraries_cache = None
     
     def convert_lib_name_to_include(self, lib_name: str) -> str:
-        """Convert library name to potential include directory name."""
+        """
+        Convert library name to potential include directory name.
+        
+        Takes an Arduino library name and converts it to the corresponding
+        ESP-IDF component include path. This involves checking against known
+        Arduino libraries, applying naming conventions, and using fallback
+        mapping rules.
+        
+        Args:
+            lib_name (str): Name of the library to convert
+            
+        Returns:
+            str: Converted include directory name
+            
+        Example:
+            >>> mapper = LibraryMapper("/arduino/framework")
+            >>> mapper.convert_lib_name_to_include("WiFi")
+            "esp_wifi"
+            >>> mapper.convert_lib_name_to_include("BluetoothSerial")
+            "bt"
+        """
         # Load Arduino Core Libraries on first call
         if self._arduino_libraries_cache is None:
             self._arduino_libraries_cache = self._get_arduino_core_libraries()
@@ -259,7 +579,22 @@ class LibraryMapper:
         return cleaned_name
     
     def _get_arduino_core_libraries(self) -> Dict[str, str]:
-        """Get all Arduino core libraries and their corresponding include paths."""
+        """
+        Get all Arduino core libraries and their corresponding include paths.
+        
+        Scans the Arduino framework libraries directory to build a comprehensive
+        mapping of library names to their corresponding include paths. This
+        includes reading library.properties files to get official library names.
+        
+        Returns:
+            Dict[str, str]: Dictionary mapping library names to include paths
+            
+        Example:
+            >>> mapper = LibraryMapper("/arduino/framework")
+            >>> libraries = mapper._get_arduino_core_libraries()
+            >>> "wifi" in libraries
+            True
+        """
         libraries_mapping = {}
         
         # Path to Arduino Core Libraries
@@ -276,14 +611,31 @@ class LibraryMapper:
                     if lib_name:
                         include_path = self._map_library_to_include_path(lib_name, entry)
                         libraries_mapping[lib_name.lower()] = include_path
-                        libraries_mapping[entry.lower()] = include_path
+                        libraries_mapping[entry.lower()] = include_path  # Also use directory name as key
         except Exception:
             pass
         
         return libraries_mapping
     
     def _get_library_name_from_properties(self, lib_dir: str) -> Optional[str]:
-        """Extract library name from library.properties file."""
+        """
+        Extract library name from library.properties file.
+        
+        Reads the library.properties file in an Arduino library directory
+        to extract the official library name as specified by the library author.
+        
+        Args:
+            lib_dir (str): Library directory path
+            
+        Returns:
+            Optional[str]: Library name if found, None otherwise
+            
+        Example:
+            >>> mapper = LibraryMapper("/arduino/framework")
+            >>> name = mapper._get_library_name_from_properties("/path/to/WiFi")
+            >>> name
+            "WiFi"
+        """
         prop_path = join(lib_dir, "library.properties")
         if not os.path.isfile(prop_path):
             return None
@@ -300,7 +652,26 @@ class LibraryMapper:
         return None
     
     def _map_library_to_include_path(self, lib_name: str, dir_name: str) -> str:
-        """Map library name to corresponding include path."""
+        """
+        Map library name to corresponding include path.
+        
+        Takes a library name and directory name and maps them to the appropriate
+        ESP-IDF component include path using an extensive mapping table that
+        covers both core ESP32 components and Arduino-specific libraries.
+        
+        Args:
+            lib_name (str): Official library name from properties file
+            dir_name (str): Directory name of the library
+            
+        Returns:
+            str: Mapped include path for the ESP-IDF component
+            
+        Example:
+            >>> mapper = LibraryMapper("/arduino/framework")
+            >>> path = mapper._map_library_to_include_path("WiFi", "WiFi")
+            >>> path
+            "esp_wifi"
+        """
         lib_name_lower = lib_name.lower().replace(' ', '').replace('-', '_')
         dir_name_lower = dir_name.lower()
         
@@ -328,7 +699,7 @@ class LibraryMapper:
             'mbedtls': 'mbedtls',
             'openssl': 'openssl',
             
-            # Arduino Core specific mappings
+            # Arduino Core specific mappings (safe mappings that don't conflict with critical components)
             'esp32blearduino': 'bt',
             'esp32_ble_arduino': 'bt',
             'esp32': 'esp32',
@@ -398,15 +769,56 @@ class LibraryMapper:
 
 
 class BuildFileManager:
-    """Manages backup and restoration of build files."""
+    """
+    Manages backup and restoration of build files.
+    
+    This class handles all operations related to the pioarduino-build.py file,
+    including creating backups, restoring from backups, and modifying the file
+    to remove unwanted include entries for ignored libraries and components.
+    
+    Attributes:
+        arduino_libs_mcu (str): Path to Arduino libraries for specific MCU
+        mcu (str): MCU type (e.g., esp32, esp32s3, esp32c3)
+        logger (ComponentLogger): Logger instance for recording operations
+        
+    Example:
+        >>> manager = BuildFileManager("/libs/esp32", "esp32", logger)
+        >>> manager.backup_pioarduino_build_py(env)
+        >>> manager.restore_pioarduino_build_py()
+    """
     
     def __init__(self, arduino_libs_mcu: str, mcu: str, logger: ComponentLogger):
+        """
+        Initialize the build file manager.
+        
+        Creates a new BuildFileManager with paths and configuration needed
+        to manage build file operations for a specific MCU type.
+        
+        Args:
+            arduino_libs_mcu (str): Path to Arduino libraries for specific MCU
+            mcu (str): MCU type (e.g., esp32, esp32s3, esp32c3)
+            logger (ComponentLogger): Logger instance for recording operations
+        """
         self.arduino_libs_mcu = arduino_libs_mcu
         self.mcu = mcu
         self.logger = logger
     
     def backup_pioarduino_build_py(self, env) -> None:
-        """Create backup of the original pioarduino-build.py."""
+        """
+        Create backup of the original pioarduino-build.py.
+        
+        Creates a backup copy of the pioarduino-build.py file before making
+        any modifications. The backup is only created if it doesn't already
+        exist and only for Arduino framework projects.
+        
+        Args:
+            env: PlatformIO environment object for framework detection
+            
+        Example:
+            >>> manager = BuildFileManager("/libs/esp32", "esp32", logger)
+            >>> manager.backup_pioarduino_build_py(env)
+            # Creates pioarduino-build.py.esp32 backup file
+        """
         if "arduino" not in env.subst("$PIOFRAMEWORK"):
             return
         
@@ -418,7 +830,18 @@ class BuildFileManager:
             self.logger.log_change(f"Created backup of pioarduino-build.py for {self.mcu}")
     
     def restore_pioarduino_build_py(self) -> None:
-        """Restore the original pioarduino-build.py from backup."""
+        """
+        Restore the original pioarduino-build.py from backup.
+        
+        Restores the pioarduino-build.py file from its backup copy and removes
+        the backup file. This effectively undoes all modifications made to
+        the build file during the session.
+        
+        Example:
+            >>> manager = BuildFileManager("/libs/esp32", "esp32", logger)
+            >>> manager.restore_pioarduino_build_py()
+            # Restores original file and removes backup
+        """
         build_py_path = join(self.arduino_libs_mcu, "pioarduino-build.py")
         backup_path = join(self.arduino_libs_mcu, f"pioarduino-build.py.{self.mcu}")
         
@@ -428,7 +851,22 @@ class BuildFileManager:
             self.logger.log_change("Restored original pioarduino-build.py from backup")
     
     def remove_ignored_lib_includes(self, ignored_libs: Set[str], project_analyzer: ProjectAnalyzer) -> None:
-        """Remove include entries for ignored libraries from pioarduino-build.py."""
+        """
+        Remove include entries for ignored libraries from pioarduino-build.py.
+        
+        Modifies the pioarduino-build.py file to remove CPPPATH entries for
+        libraries that are marked to be ignored. Includes safety checks to
+        prevent removal of libraries that are actually used in the project.
+        
+        Args:
+            ignored_libs (Set[str]): Set of library names to ignore
+            project_analyzer (ProjectAnalyzer): Analyzer to check if components are used
+            
+        Example:
+            >>> manager = BuildFileManager("/libs/esp32", "esp32", logger)
+            >>> ignored = {"unused_lib", "another_lib"}
+            >>> manager.remove_ignored_lib_includes(ignored, analyzer)
+        """
         build_py_path = join(self.arduino_libs_mcu, "pioarduino-build.py")
         
         if not os.path.exists(build_py_path):
@@ -481,7 +919,21 @@ class BuildFileManager:
             self.logger.log_change(f"Error processing ignored library includes: {str(e)}")
     
     def remove_cpppath_entries(self, removed_components: Set[str]) -> None:
-        """Remove CPPPATH entries for removed components from pioarduino-build.py."""
+        """
+        Remove CPPPATH entries for removed components from pioarduino-build.py.
+        
+        Removes include path entries from the build file for components that
+        have been explicitly removed from the project configuration. This
+        helps clean up the build environment after component removal.
+        
+        Args:
+            removed_components (Set[str]): Set of component names that were removed
+            
+        Example:
+            >>> manager = BuildFileManager("/libs/esp32", "esp32", logger)
+            >>> removed = {"esp_camera", "esp_dsp"}
+            >>> manager.remove_cpppath_entries(removed)
+        """
         build_py_path = join(self.arduino_libs_mcu, "pioarduino-build.py")
         
         if not os.path.exists(build_py_path):
@@ -513,7 +965,26 @@ class BuildFileManager:
             self.logger.log_change(f"Error cleaning up CPPPATH entries: {str(e)}")
     
     def _validate_changes(self, original_content: str, new_content: str) -> bool:
-        """Validate that the changes are reasonable."""
+        """
+        Validate that the changes are reasonable.
+        
+        Performs safety checks on file modifications to ensure that the changes
+        are reasonable and won't break the build system. Prevents removal of
+        more than 50% of the file content.
+        
+        Args:
+            original_content (str): Original file content before modifications
+            new_content (str): Modified file content after changes
+            
+        Returns:
+            bool: True if changes are valid and safe, False otherwise
+            
+        Example:
+            >>> manager = BuildFileManager("/libs/esp32", "esp32", logger)
+            >>> is_valid = manager._validate_changes(original, modified)
+            >>> is_valid
+            True  # If less than 50% of content was removed
+        """
         original_lines = len(original_content.splitlines())
         new_lines = len(new_content.splitlines())
         removed_lines = original_lines - new_lines
@@ -523,24 +994,75 @@ class BuildFileManager:
 
 
 class ComponentManager:
-    """Manages IDF components for ESP32 Arduino framework builds with logging support."""
+    """
+    Manages IDF components for ESP32 Arduino framework builds with logging support.
+    
+    This is the main class that coordinates all component management operations
+    for ESP32 Arduino framework projects. It handles component addition and removal,
+    library ignore processing, build file management, and provides comprehensive
+    logging of all operations.
+    
+    The ComponentManager integrates multiple specialized classes to provide a
+    complete solution for managing ESP-IDF components in PlatformIO Arduino
+    framework projects.
+    
+    Attributes:
+        env: PlatformIO environment object
+        platform: PlatformIO platform object
+        config: Project configuration object
+        board: Board configuration object
+        mcu (str): MCU type (e.g., esp32, esp32s3)
+        project_src_dir (str): Path to project source directory
+        arduino_framework_dir (str): Path to Arduino framework directory
+        arduino_libs_mcu (str): Path to Arduino libraries for specific MCU
+        removed_components (Set[str]): Set of removed component names
+        ignored_libs (Set[str]): Set of ignored library names
+        logger (ComponentLogger): Logger for all operations
+        yaml_handler (ComponentYamlHandler): YAML file operations handler
+        project_analyzer (ProjectAnalyzer): Project dependency analyzer
+        library_mapper (LibraryMapper): Library name to include path mapper
+        build_file_manager (BuildFileManager): Build file operations manager
+        
+    Example:
+        >>> manager = ComponentManager(env)
+        >>> manager.handle_component_settings(add_components=True, remove_components=True)
+        >>> manager.handle_lib_ignore()
+        >>> manager.restore_pioarduino_build_py()
+    """
     
     def __init__(self, env):
-        """Initialize the ComponentManager with all required dependencies."""
+        """
+        Initialize the ComponentManager with all required dependencies.
+        
+        Creates a new ComponentManager instance with all necessary helper classes
+        and configuration. Extracts essential information from the PlatformIO
+        environment and sets up the component tracking system.
+        
+        Args:
+            env: PlatformIO environment object containing project and build information
+            
+        Example:
+            >>> from component_manager import ComponentManager
+            >>> manager = ComponentManager(env)
+            >>> # Manager is now ready to handle component operations
+        """
+        # Core PlatformIO environment attributes
         self.env = env
         self.platform = env.PioPlatform()
         self.config = env.GetProjectConfig()
         self.board = env.BoardConfig()
         self.mcu = self.board.get("build.mcu", "esp32").lower()
+        
+        # Path configurations
         self.project_src_dir = env.subst("$PROJECT_SRC_DIR")
         self.arduino_framework_dir = self.platform.get_package_dir("framework-arduinoespressif32")
         self.arduino_libs_mcu = join(self.platform.get_package_dir("framework-arduinoespressif32-libs"), self.mcu)
         
-        # Component tracking
+        # Component tracking sets
         self.removed_components: Set[str] = set()
         self.ignored_libs: Set[str] = set()
         
-        # Initialize helper classes
+        # Initialize helper classes for different responsibilities
         self.logger = ComponentLogger()
         self.yaml_handler = ComponentYamlHandler(self.logger)
         self.project_analyzer = ProjectAnalyzer(env)
@@ -548,11 +1070,42 @@ class ComponentManager:
         self.build_file_manager = BuildFileManager(self.arduino_libs_mcu, self.mcu, self.logger)
     
     def _log_change(self, message: str) -> None:
-        """Delegate to logger for backward compatibility."""
+        """
+        Delegate to logger for backward compatibility.
+        
+        Provides backward compatibility by delegating logging calls to the
+        dedicated ComponentLogger instance. This maintains the same API
+        while using the refactored logging system.
+        
+        Args:
+            message (str): Message to log describing the change or operation
+            
+        Example:
+            >>> manager = ComponentManager(env)
+            >>> manager._log_change("Component operation completed")
+        """
         self.logger.log_change(message)
 
     def handle_component_settings(self, add_components: bool = False, remove_components: bool = False) -> None:
-        """Handle adding and removing IDF components based on project configuration."""
+        """
+        Handle adding and removing IDF components based on project configuration.
+        
+        This is the main method for processing component additions and removals
+        based on the custom_component_add and custom_component_remove options
+        in the project configuration. It coordinates YAML file operations,
+        component cleanup, and build file management.
+        
+        Args:
+            add_components (bool): Whether to process component additions from config
+            remove_components (bool): Whether to process component removals from config
+            
+        Example:
+            >>> manager = ComponentManager(env)
+            >>> # Add and remove components based on platformio.ini settings
+            >>> manager.handle_component_settings(add_components=True, remove_components=True)
+            >>> # Only add components
+            >>> manager.handle_component_settings(add_components=True)
+        """
         # Create backup before first component removal and always when a component is added
         if remove_components and not self.removed_components or add_components:
             self.build_file_manager.backup_pioarduino_build_py(self.env)
@@ -595,7 +1148,18 @@ class ComponentManager:
             self._log_change(f"Session completed with {self.logger.get_change_count()} changes")
     
     def handle_lib_ignore(self) -> None:
-        """Handle lib_ignore entries from platformio.ini and remove corresponding includes."""
+        """
+        Handle lib_ignore entries from platformio.ini and remove corresponding includes.
+        
+        Processes the lib_ignore configuration option to remove unwanted library
+        includes from the build system. This helps reduce build time and binary
+        size by excluding unused libraries while protecting critical components.
+        
+        Example:
+            >>> manager = ComponentManager(env)
+            >>> # Process lib_ignore entries from platformio.ini
+            >>> manager.handle_lib_ignore()
+        """
         # Create backup before processing lib_ignore
         if not self.ignored_libs:
             self.build_file_manager.backup_pioarduino_build_py(self.env)
@@ -609,11 +1173,44 @@ class ComponentManager:
             self._log_change(f"Processed {len(lib_ignore_entries)} ignored libraries")
     
     def restore_pioarduino_build_py(self, source=None, target=None, env=None) -> None:
-        """Restore the original pioarduino-build.py from backup."""
+        """
+        Restore the original pioarduino-build.py from backup.
+        
+        Restores the build file to its original state, undoing all modifications
+        made during the session. This method maintains compatibility with
+        PlatformIO's callback system by accepting unused parameters.
+        
+        Args:
+            source: Unused parameter for PlatformIO compatibility
+            target: Unused parameter for PlatformIO compatibility  
+            env: Unused parameter for PlatformIO compatibility
+            
+        Example:
+            >>> manager = ComponentManager(env)
+            >>> # Restore original build file
+            >>> manager.restore_pioarduino_build_py()
+            >>> # Can also be used as PlatformIO callback
+            >>> env.AddPostAction("buildprog", manager.restore_pioarduino_build_py)
+        """
         self.build_file_manager.restore_pioarduino_build_py()
     
     def _get_lib_ignore_entries(self) -> List[str]:
-        """Get lib_ignore entries from current environment configuration only."""
+        """
+        Get lib_ignore entries from current environment configuration only.
+        
+        Extracts and processes lib_ignore entries from the project configuration,
+        converting library names to include directory names and filtering out
+        critical ESP32 components that should never be ignored.
+        
+        Returns:
+            List[str]: List of library names to ignore after processing and filtering
+            
+        Example:
+            >>> manager = ComponentManager(env)
+            >>> ignored = manager._get_lib_ignore_entries()
+            >>> "esp_wifi" in ignored  # Only if explicitly ignored and not critical
+            False  # WiFi is typically critical
+        """
         try:
             # Get lib_ignore from current environment only
             lib_ignore = self.env.GetProjectOption("lib_ignore", [])
@@ -634,8 +1231,16 @@ class ComponentManager:
             
             # Filter out critical ESP32 components that should never be ignored
             critical_components = [
-                'lwip', 'freertos', 'esp_system', 'esp_common', 'driver',
-                'nvs_flash', 'spi_flash', 'esp_timer', 'esp_event', 'log'
+                'lwip',           # Network stack
+                'freertos',       # Real-time OS
+                'esp_system',     # System functions
+                'esp_common',     # Common ESP functions
+                'driver',         # Hardware drivers
+                'nvs_flash',      # Non-volatile storage
+                'spi_flash',      # Flash memory access
+                'esp_timer',      # Timer functions
+                'esp_event',      # Event system
+                'log'             # Logging system
             ]
             
             filtered_entries = []
@@ -649,7 +1254,24 @@ class ComponentManager:
             return []
     
     def _remove_components(self, component_data: Dict[str, Any], components_to_remove: list) -> None:
-        """Remove specified components from the configuration."""
+        """
+        Remove specified components from the configuration.
+        
+        Removes components from the idf_component.yml dependencies section
+        and tracks them for filesystem cleanup. Empty component names are
+        automatically skipped.
+        
+        Args:
+            component_data (Dict[str, Any]): Component configuration data from YAML
+            components_to_remove (list): List of component names to remove
+            
+        Example:
+            >>> manager = ComponentManager(env)
+            >>> data = {"dependencies": {"esp_camera": {"version": "*"}}}
+            >>> manager._remove_components(data, ["esp_camera"])
+            >>> "esp_camera" in data["dependencies"]
+            False
+        """
         dependencies = component_data.setdefault("dependencies", {})
         
         for component in components_to_remove:
@@ -666,7 +1288,24 @@ class ComponentManager:
                 self.removed_components.add(filesystem_name)
     
     def _add_components(self, component_data: Dict[str, Any], components_to_add: list) -> None:
-        """Add specified components to the configuration."""
+        """
+        Add specified components to the configuration.
+        
+        Adds components to the idf_component.yml dependencies section with
+        version specifications. Components that are too short (≤4 characters)
+        or already exist are automatically skipped.
+        
+        Args:
+            component_data (Dict[str, Any]): Component configuration data from YAML
+            components_to_add (list): List of component entries to add (can include versions)
+            
+        Example:
+            >>> manager = ComponentManager(env)
+            >>> data = {"dependencies": {}}
+            >>> manager._add_components(data, ["esp_camera@1.0.0", "esp_dsp"])
+            >>> "esp_camera" in data["dependencies"]
+            True
+        """
         dependencies = component_data.setdefault("dependencies", {})
         
         for component in components_to_add:
@@ -681,25 +1320,90 @@ class ComponentManager:
                 self._log_change(f"Added component: {component_name} (version: {version})")
     
     def _parse_component_entry(self, entry: str) -> tuple[str, str]:
-        """Parse component entry into name and version."""
+        """
+        Parse component entry into name and version.
+        
+        Parses a component specification string that may include version
+        information separated by '@' symbol. If no version is specified,
+        defaults to wildcard version.
+        
+        Args:
+            entry (str): Component entry string (e.g., "component@1.0.0" or "component")
+            
+        Returns:
+            tuple[str, str]: Tuple of (component_name, version)
+            
+        Example:
+            >>> manager = ComponentManager(env)
+            >>> name, version = manager._parse_component_entry("esp_camera@1.0.0")
+            >>> name, version
+            ("esp_camera", "1.0.0")
+            >>> name, version = manager._parse_component_entry("esp_dsp")
+            >>> name, version
+            ("esp_dsp", "*")
+        """
         if "@" in entry:
             name, version = entry.split("@", 1)
             return (name.strip(), version.strip())
         return (entry.strip(), "*")
     
     def _convert_component_name_to_filesystem(self, component_name: str) -> str:
-        """Convert component name from registry format to filesystem format."""
+        """
+        Convert component name from registry format to filesystem format.
+        
+        Converts component names from ESP-IDF component registry format
+        (which uses forward slashes) to filesystem-safe format (using
+        double underscores) for directory operations.
+        
+        Args:
+            component_name (str): Component name in registry format
+            
+        Returns:
+            str: Component name in filesystem-safe format
+            
+        Example:
+            >>> manager = ComponentManager(env)
+            >>> fs_name = manager._convert_component_name_to_filesystem("espressif/esp_camera")
+            >>> fs_name
+            "espressif__esp_camera"
+        """
         return component_name.replace("/", "__")
     
     def _cleanup_removed_components(self) -> None:
-        """Clean up removed components and restore original build file."""
+        """
+        Clean up removed components and restore original build file.
+        
+        Performs cleanup operations for components that have been removed,
+        including removing their include directories and cleaning up
+        CPPPATH entries from the build file.
+        
+        Example:
+            >>> manager = ComponentManager(env)
+            >>> # After removing components
+            >>> manager._cleanup_removed_components()
+            # Removes include directories and cleans build file
+        """
         for component in self.removed_components:
             self._remove_include_directory(component)
         
         self.build_file_manager.remove_cpppath_entries(self.removed_components)
     
     def _remove_include_directory(self, component: str) -> None:
-        """Remove include directory for a component."""
+        """
+        Remove include directory for a component.
+        
+        Removes the include directory for a specific component from the
+        Arduino libraries directory. This helps clean up the filesystem
+        after component removal.
+        
+        Args:
+            component (str): Component name whose include directory should be removed
+            
+        Example:
+            >>> manager = ComponentManager(env)
+            >>> manager._remove_include_directory("esp_camera")
+            # Removes /path/to/libs/esp32/include/esp_camera directory
+        """
         include_path = join(self.arduino_libs_mcu, "include", component)
         
         if os.path.exists(include_path):
