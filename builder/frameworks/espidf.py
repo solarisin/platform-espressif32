@@ -187,6 +187,18 @@ SDKCONFIG_PATH = os.path.expandvars(board.get(
         os.path.join(PROJECT_DIR, "sdkconfig.%s" % env.subst("$PIOENV")),
 ))
 
+def contains_path_traversal(url):
+    """Check for Path Traversal patterns"""
+    dangerous_patterns = [
+        '../', '..\\',  # Standard Path Traversal
+        '%2e%2e%2f', '%2e%2e%5c',  # URL-encoded
+        '..%2f', '..%5c',  # Mixed
+        '%252e%252e%252f',  # Double encoded
+    ]
+    
+    url_lower = url.lower()
+    return any(pattern in url_lower for pattern in dangerous_patterns)
+
 #
 # generate modified Arduino IDF sdkconfig, applying settings from "custom_sdkconfig"
 #
@@ -220,15 +232,20 @@ def HandleArduinoIDFsettings(env):
         for file_entry in sdkconfig_entries:
             # Handle HTTP/HTTPS URLs
             if "http" in file_entry and "://" in file_entry:
-                try:
-                    response = requests.get(file_entry.split(" ")[0])
-                    if response.ok:
-                        return response.content.decode('utf-8')
-                except requests.RequestException as e:
-                    print(f"Error downloading {file_entry}: {e}")
-                except UnicodeDecodeError as e:
-                    print(f"Error decoding response from {file_entry}: {e}")
-                    return ""
+                url = file_entry.split(" ")[0]
+                # Path Traversal protection
+                if contains_path_traversal(url):
+                    print(f"Path Traversal detected: {url} check your URL path")
+                else:
+                    try:
+                        response = requests.get(file_entry.split(" ")[0], timeout=10)
+                        if response.ok:
+                            return response.content.decode('utf-8')
+                    except requests.RequestException as e:
+                        print(f"Error downloading {file_entry}: {e}")
+                    except UnicodeDecodeError as e:
+                        print(f"Error decoding response from {file_entry}: {e}")
+                        return ""
             
             # Handle local files
             if "file://" in file_entry:
@@ -301,6 +318,9 @@ def HandleArduinoIDFsettings(env):
         return config_flags
 
     def write_sdkconfig_file(idf_config_flags, checksum_source):
+        if "arduino" not in env.subst("$PIOFRAMEWORK"):
+            print("Error: Arduino framework required for sdkconfig processing")
+            return
         """Write the final sdkconfig.defaults file with checksum."""
         sdkconfig_src = join(arduino_libs_mcu, "sdkconfig")
         sdkconfig_dst = join(PROJECT_DIR, "sdkconfig.defaults")
@@ -308,7 +328,7 @@ def HandleArduinoIDFsettings(env):
         # Generate checksum for validation (maintains original logic)
         checksum = get_MD5_hash(checksum_source.strip() + mcu)
         
-        with open(sdkconfig_src, 'r') as src, open(sdkconfig_dst, 'w') as dst:
+        with open(sdkconfig_src, 'r', encoding='utf-8') as src, open(sdkconfig_dst, 'w', encoding='utf-8') as dst:
             # Write checksum header (critical for compilation decision logic)
             dst.write(f"# TASMOTA__{checksum}\n")
             
