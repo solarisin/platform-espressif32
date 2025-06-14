@@ -19,6 +19,10 @@ ESP32 is a series of low-cost, low-power system on a chip microcontrollers with 
 1. Setup new VSCode pioarduino project.
 1. Configure a platform option in platformio.ini file:
 
+## Documentation
+[pioarduino Wiki](https://deepwiki.com/pioarduino/platform-espressif32)
+The Wiki is AI generated and insane detailed and accurate.
+
 ### Stable Arduino
 currently espressif Arduino 3.2.0 and IDF 5.4.1
 
