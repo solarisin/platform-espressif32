@@ -8,14 +8,14 @@ ESP32 is a series of low-cost, low-power system on a chip microcontrollers with 
 
 * Issues with boards (wrong / missing). All issues caused from boards will not be fixed from the maintainer(s). A PR needs to be provided against branch `develop` to solve.
 * No support for the Arduino Nora Nano board, issues needs to be solved by the community
-## IDE Preparation
 
+## IDE Preparation
 - [Download and install Microsoft Visual Studio Code](https://code.visualstudio.com/). pioarduino IDE is on top of it.
 - Open the extension manager.
 - Search for the `pioarduino ide` extension.
 - Install pioarduino IDE extension.
 
-# Usage
+## Usage
 1. Setup new VSCode pioarduino project.
 1. Configure a platform option in platformio.ini file:
 
