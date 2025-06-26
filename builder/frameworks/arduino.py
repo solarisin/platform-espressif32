@@ -109,7 +109,7 @@ def get_platform_default_threshold(mcu):
         "esp32": 32000,      # Standard ESP32
         "esp32s2": 32000,    # ESP32-S2
         "esp32s3": 32766,    # ESP32-S3
-        "esp32c3": 32000,    # ESP32-C3
+        "esp32c3": 30000,    # ESP32-C3
         "esp32c2": 32000,    # ESP32-C2
         "esp32c6": 31600,    # ESP32-C6
         "esp32h2": 32000,    # ESP32-H2
