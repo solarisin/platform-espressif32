@@ -45,13 +45,13 @@
       "type": "framework",
       "optional": true,
       "owner": "espressif",
-      "version": "https://github.com/pioarduino/platform-espressif32/releases/download/55.03.30-alpha1/c2_cbe9388f45_compile_skeleton.zip"
+      "version": "https://github.com/pioarduino/platform-espressif32/releases/download/55.03.30-alpha1/c2_arduino_compile_skeleton.zip"
     },
     "framework-espidf": {
       "type": "framework",
       "optional": true,
       "owner": "pioarduino",
-      "version": "https://github.com/pioarduino/esp-idf/releases/download/v5.5.0.250623/esp-idf-v5.5.0.zip"
+      "version": "https://github.com/pioarduino/esp-idf/releases/download/v5.5.0.250516/esp-idf-v5.5.0.zip"
     },
     "toolchain-xtensa-esp-elf": {
       "type": "toolchain",
