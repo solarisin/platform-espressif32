@@ -1,1 +1,1 @@
-# NimBLE extended client example
+# NimBLE Sample Scan example
