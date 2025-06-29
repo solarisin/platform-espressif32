@@ -40,18 +40,13 @@ from SCons.Script import (
     DefaultEnvironment,
 )
 
-from platformio import fs, __version__
+from platformio import fs
 from platformio.compat import IS_WINDOWS
 from platformio.proc import exec_command
 from platformio.builder.tools.piolib import ProjectAsLibBuilder
 from platformio.project.config import ProjectConfig
 from platformio.package.version import get_original_version, pepver_to_semver
 
-# Added to avoid conflicts between installed Python packages from
-# the IDF virtual environment and PlatformIO Core
-# Note: This workaround can be safely deleted when PlatformIO 6.1.7 is released
-if os.environ.get("PYTHONPATH"):
-    del os.environ["PYTHONPATH"]
 
 env = DefaultEnvironment()
 env.SConscript("_embed_files.py", exports="env")
@@ -1839,12 +1834,21 @@ if "arduino" in env.subst("$PIOFRAMEWORK"):
         LIBSOURCE_DIRS=[os.path.join(ARDUINO_FRAMEWORK_DIR, "libraries")]
     )
 
+# Set ESP-IDF version environment variables (needed for proper Kconfig processing)
+framework_version = get_framework_version()
+major_version = framework_version.split('.')[0] + '.' + framework_version.split('.')[1]
+os.environ["ESP_IDF_VERSION"] = major_version
+
+# Configure CMake arguments with ESP-IDF version
 extra_cmake_args = [
     "-DIDF_TARGET=" + idf_variant,
     "-DPYTHON_DEPS_CHECKED=1",
     "-DEXTRA_COMPONENT_DIRS:PATH=" + ";".join(extra_components),
     "-DPYTHON=" + get_python_exe(),
     "-DSDKCONFIG=" + SDKCONFIG_PATH,
+    f"-DESP_IDF_VERSION={major_version}",
+    f"-DESP_IDF_VERSION_MAJOR={framework_version.split('.')[0]}",
+    f"-DESP_IDF_VERSION_MINOR={framework_version.split('.')[1]}",
 ]
 
 # This will add the linker flag for the map file
