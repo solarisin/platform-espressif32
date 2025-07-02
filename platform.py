@@ -35,6 +35,7 @@ MKLITTLEFS_VERSION_320 = "3.2.0"
 MKLITTLEFS_VERSION_400 = "4.0.0"
 DEFAULT_DEBUG_SPEED = "5000"
 DEFAULT_APP_OFFSET = "0x10000"
+ARDUINO_ESP32_PACKAGE_URL = "https://raw.githubusercontent.com/espressif/arduino-esp32/release/v3.1.x/package/package_esp32_index.template.json"
 
 # MCUs that support ESP-builtin debug
 ESP_BUILTIN_DEBUG_MCUS = frozenset([
@@ -310,11 +311,8 @@ class Espressif32Platform(PlatformBase):
         self.packages["framework-arduinoespressif32-libs"]["optional"] = False
 
         if is_internet_available():
-            # Use branch release/v3.1.x
-            url = ("https://raw.githubusercontent.com/espressif/arduino-esp32/"
-                   "release/v3.1.x/package/package_esp32_index.template.json")
             try:
-                response = requests.get(url, timeout=30)
+                response = requests.get(ARDUINO_ESP32_PACKAGE_URL, timeout=30)
                 response.raise_for_status()
                 packjdata = response.json()
                 dyn_lib_url = packjdata['packages'][0]['tools'][0]['systems'][0]['url']
