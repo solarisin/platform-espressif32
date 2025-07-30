@@ -25,7 +25,7 @@ Espressif Systems is a privately held, fabless semiconductor company renowned fo
 The Wiki is AI generated and insane detailed and accurate.
 
 ### Stable Arduino
-currently espressif Arduino 3.2.1 and IDF 5.4.2
+currently espressif Arduino 3.3.0 and IDF 5.5.0
 
 ```ini
 [env:stable]
