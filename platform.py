@@ -827,6 +827,7 @@ class Espressif32Platform(PlatformBase):
                 },
                 "init_break": "thb app_main",
                 "init_cmds": [
+                    "set mi-async on",
                     "define pio_reset_halt_target",
                     "   monitor reset halt",
                     "   flushregs",
