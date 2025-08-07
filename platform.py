@@ -830,7 +830,7 @@ class Espressif32Platform(PlatformBase):
                     "set mi-async on",
                     "define pio_reset_halt_target",
                     "   monitor reset halt",
-                    "   flushregs",
+                    "   maintenance flush register-cache",
                     "end",
                     "define pio_reset_run_target",
                     "   monitor reset",
